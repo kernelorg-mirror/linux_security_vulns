@@ -1,5 +1,6 @@
 pub mod common;
 pub mod cve;
+pub mod plain;
 
 pub use common::{CpeMatch, CpeNodes, VersionRange};
 
@@ -65,6 +66,7 @@ impl ProviderFactory {
     pub fn create(provider_type: &str) -> Result<Box<dyn VulnerabilityProvider>> {
         match provider_type.to_lowercase().as_str() {
             "cve" => Ok(Box::new(cve::CveProvider::new())),
+            "plain" => Ok(Box::new(plain::PlainProvider::new())),
             _ => Err(anyhow!("Unknown provider type: {}", provider_type)),
         }
     }
@@ -72,6 +74,6 @@ impl ProviderFactory {
     /// Get list of available providers
     #[allow(dead_code)]
     pub fn available_providers() -> Vec<&'static str> {
-        vec!["cve"]
+        vec!["cve", "plain"]
     }
 }
