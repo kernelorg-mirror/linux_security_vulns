@@ -5,7 +5,7 @@
 //
 
 use crate::state::DyadState;
-use cve_utils::{Kernel, KernelPair};
+use vuln_utils::{Kernel, KernelPair};
 use log::debug;
 use owo_colors::{OwoColorize, Stream::Stdout};
 use std::cmp::Ordering;

@@ -27,7 +27,7 @@ pub use self::git_utils::{
     git_sort_ids, match_pattern, print_git_error_details, resolve_reference,
 };
 // CVE file operations
-pub use self::cve_utils::{extract_cve_id_from_path, find_next_free_cve_id};
+pub use self::vuln_utils::{extract_cve_id_from_path, find_next_free_cve_id};
 // Git configuration utilities
 pub use self::git_config::{get_git_config, set_git_config};
 // CVE validation and processing
@@ -705,7 +705,7 @@ pub mod git_utils {
 }
 
 /// CVE file operations commonly used across tools
-pub mod cve_utils {
+pub mod vuln_utils {
     use anyhow::{anyhow, Context, Result};
     use std::fs;
     use std::path::Path;

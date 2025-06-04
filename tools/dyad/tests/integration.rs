@@ -227,9 +227,9 @@ fn run_test_case(test_case: &TestCase) -> TestResult {
     }
 }
 
-/// Find the CVE directory using cve_utils
+/// Find the CVE directory using vuln_utils
 fn find_cve_dir() -> Result<PathBuf, String> {
-    match cve_utils::common::find_vulns_dir() {
+    match vuln_utils::common::find_vulns_dir() {
         Ok(vulns_dir) => {
             let cve_dir = vulns_dir.join("cve");
             if cve_dir.exists() {

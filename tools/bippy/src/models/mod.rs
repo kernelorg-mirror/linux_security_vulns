@@ -3,8 +3,6 @@
 // Copyright (c) 2025 - Sasha Levin <sashal@kernel.org>
 
 pub mod cli;
-pub mod cve;
 
 pub use cli::Args;
-pub use cve::*;
-pub use cve_utils::dyad::DyadEntry;
+pub use vuln_utils::dyad::DyadEntry;

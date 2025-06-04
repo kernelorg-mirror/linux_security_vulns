@@ -4,8 +4,8 @@
 // Copyright (c) 2025 - Sasha Levin <sashal@kernel.org>
 //
 
-use cve_utils::Kernel;
-use cve_utils::Verhaal;
+use vuln_utils::Kernel;
+use vuln_utils::Verhaal;
 use log::debug;
 
 /// State for dyad tool runtime
@@ -40,8 +40,8 @@ impl DyadState {
 
 /// Validates and sets up environment variables for the `DyadState`
 pub fn validate_env_vars(state: &mut DyadState) {
-    // Use cve_utils to get kernel tree path
-    match cve_utils::common::get_kernel_tree() {
+    // Use vuln_utils to get kernel tree path
+    match vuln_utils::common::get_kernel_tree() {
         Ok(path) => state.kernel_tree = path.to_string_lossy().into_owned(),
         Err(e) => panic!("Failed to get kernel tree: {e}"),
     }

@@ -10,10 +10,10 @@
 
 use anyhow::{anyhow, Result};
 use clap::Parser;
-use cve_utils::common;
-use cve_utils::dyad::DyadEntry;
-use cve_utils::get_kernel_tree;
-use cve_utils::Kernel;
+use vuln_utils::common;
+use vuln_utils::dyad::DyadEntry;
+use vuln_utils::get_kernel_tree;
+use vuln_utils::Kernel;
 use log::debug;
 use log::error;
 use owo_colors::{OwoColorize, Stream::Stdout};
@@ -191,7 +191,7 @@ fn print_fixed_commits(kernel_tree: &Path, dyad_records: &Vec<DyadRecord>, fixed
     );
     for fix in fixes {
         let commit_details =
-            match cve_utils::get_commit_details(kernel_tree, &fix.kernel.git_id(), None) {
+            match vuln_utils::get_commit_details(kernel_tree, &fix.kernel.git_id(), None) {
                 Ok(c) => c,
                 Err(_e) => fix.kernel.git_id(),
             };
@@ -360,7 +360,7 @@ fn main() -> Result<()> {
         // If this is a tag, turn it into a commit, if it is a commit, force it to be a commit.
         // See `man git reference` for details about this format.
         let git_sha_commit = format!("{}^{{commit}}", git_sha);
-        let git_full_sha = cve_utils::get_full_sha(&kernel_tree, &git_sha_commit)?;
+        let git_full_sha = vuln_utils::get_full_sha(&kernel_tree, &git_sha_commit)?;
 
         // Turn the git sha into a valid kernel object
         let test_kernel = match Kernel::from_id(&git_full_sha) {

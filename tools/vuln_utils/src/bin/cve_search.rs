@@ -5,8 +5,8 @@
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use owo_colors::OwoColorize;
-use cve_utils::common;
-use cve_utils::print_git_error_details;
+use vuln_utils::common;
+use vuln_utils::print_git_error_details;
 
 /// Search the published CVE records for a git SHA or find a git SHA associated with a CVE ID
 #[derive(Parser, Debug)]
@@ -44,7 +44,7 @@ fn main() -> Result<()> {
     };
 
     // Try to interpret the search string as a git SHA first
-    if let Ok(_git_sha_full) = cve_utils::get_full_sha(&kernel_tree, &args.search_string) {
+    if let Ok(_git_sha_full) = vuln_utils::get_full_sha(&kernel_tree, &args.search_string) {
         // It's a valid SHA, search for it in the CVE records
         if let Some(cve) = common::find_cve_by_sha(&cve_root, &args.search_string) {
             println!("{} is assigned to git id {}",
@@ -70,7 +70,7 @@ fn main() -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use cve_utils::common;
+    use vuln_utils::common;
 
     #[test]
     fn test_real_cve_lookup_by_id() {

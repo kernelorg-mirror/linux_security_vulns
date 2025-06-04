@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0
 // (c) 2025, Sasha Levin <sashal@kernel.org>
 
-pub use cve_utils::get_cve_root;
+pub use vuln_utils::get_cve_root;
 
 // Setup logging with optional debug level
 pub fn setup_logging(debug: bool, batch_mode: bool) {

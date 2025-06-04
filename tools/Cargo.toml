@@ -68,39 +68,39 @@ path = "strak/src/main.rs"
 # CVE Utils binaries
 [[bin]]
 name = "cve_search"
-path = "cve_utils/src/bin/cve_search.rs"
+path = "vuln_utils/src/bin/cve_search.rs"
 
 [[bin]]
 name = "cve_reject"
-path = "cve_utils/src/bin/cve_reject.rs"
+path = "vuln_utils/src/bin/cve_reject.rs"
 
 [[bin]]
 name = "cve_update"
-path = "cve_utils/src/bin/cve_update.rs"
+path = "vuln_utils/src/bin/cve_update.rs"
 
 [[bin]]
 name = "cve_publish"
-path = "cve_utils/src/bin/cve_publish.rs"
+path = "vuln_utils/src/bin/cve_publish.rs"
 
 [[bin]]
 name = "cve_create"
-path = "cve_utils/src/bin/cve_create.rs"
+path = "vuln_utils/src/bin/cve_create.rs"
 
 [[bin]]
 name = "cve_review"
-path = "cve_utils/src/bin/cve_review.rs"
+path = "vuln_utils/src/bin/cve_review.rs"
 
 [[bin]]
 name = "update_dyad"
-path = "cve_utils/src/bin/update_dyad.rs"
+path = "vuln_utils/src/bin/update_dyad.rs"
 
 [[bin]]
 name = "score"
-path = "cve_utils/src/bin/score.rs"
+path = "vuln_utils/src/bin/score.rs"
 
 [[bin]]
 name = "cve_stats"
-path = "cve_utils/src/bin/cve_stats.rs"
+path = "vuln_utils/src/bin/cve_stats.rs"
 
 [[bin]]
 name = "cve_classifier"
@@ -118,5 +118,5 @@ harness = true
 required-features = []
 
 [lib]
-name = "cve_utils"
-path = "cve_utils/src/lib.rs"
+name = "vuln_utils"
+path = "vuln_utils/src/lib.rs"

@@ -18,9 +18,9 @@ pub fn read_tags_file(script_dir: &Path) -> Result<Vec<String>> {
         .collect())
 }
 
-/// Read the UUID for the Linux kernel CVE team from a file
-pub fn read_uuid(script_dir: &Path) -> Result<String> {
-    let uuid_path = script_dir.join("linux.uuid");
+/// Read a UUID from a file
+pub fn read_uuid(script_dir: &Path, uuid_filename: &str) -> Result<String> {
+    let uuid_path = script_dir.join(uuid_filename);
     let content = std::fs::read_to_string(&uuid_path)
         .with_context(|| format!("Failed to read UUID file at {}", uuid_path.display()))?;
 

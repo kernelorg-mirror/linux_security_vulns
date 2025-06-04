@@ -12,7 +12,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::str;
 use walkdir::WalkDir;
-use cve_utils::cve_utils::extract_cve_id_from_path;
+use vuln_utils::vuln_utils::extract_cve_id_from_path;
 
 #[derive(Parser)]
 #[command(author, version, about = "CVE statistics utility")]
@@ -150,7 +150,7 @@ fn main() {
             eprintln!("Error: {e}");
 
             // Provide additional context for git errors
-            cve_utils::print_git_error_details(&e);
+            vuln_utils::print_git_error_details(&e);
 
             std::process::exit(1);
         }

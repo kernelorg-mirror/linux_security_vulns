@@ -5,8 +5,8 @@
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use owo_colors::OwoColorize;
-use cve_utils::common;
-use cve_utils::print_git_error_details;
+use vuln_utils::common;
+use vuln_utils::print_git_error_details;
 use indicatif::{ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 use std::env;
@@ -18,7 +18,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use tempfile::NamedTempFile;
 use walkdir::WalkDir;
-use cve_utils::cve_utils::extract_cve_id_from_path;
+use vuln_utils::vuln_utils::extract_cve_id_from_path;
 
 /// Update all .dyad files in the tree.
 ///
@@ -338,7 +338,7 @@ fn process_single_file(
 mod tests {
     use super::*;
     use tempfile::tempdir;
-    use cve_utils::cve_utils::extract_cve_id_from_path;
+    use vuln_utils::vuln_utils::extract_cve_id_from_path;
 
     #[test]
     fn test_extract_cve_id_from_path() {

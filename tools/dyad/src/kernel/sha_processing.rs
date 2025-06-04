@@ -5,7 +5,7 @@
 //
 
 use crate::state::DyadState;
-use cve_utils::Kernel;
+use vuln_utils::Kernel;
 use log::debug;
 
 /// Adds a git SHA to the state's list of fixing kernels
@@ -21,8 +21,8 @@ pub fn process_fixing_sha(state: &mut DyadState, git_sha: &str) -> bool {
             // Sometimes the git id is in stable kernels but is NOT in a released Linus tree
             // just yet, so verhaal will not have the data. So let's check the git repo to see
             // if that's the case
-            if let Ok(path) = cve_utils::common::get_kernel_tree()
-                && let Ok(git_sha_full) = cve_utils::get_full_sha(&path, git_sha) {
+            if let Ok(path) = vuln_utils::common::get_kernel_tree()
+                && let Ok(git_sha_full) = vuln_utils::get_full_sha(&path, git_sha) {
                     // It is valid, so let's make an "empty" kernel object and fill it in by hand
                     // without a valid version number just yet.
                     let kernel = Kernel::from_id_no_validate(&git_sha_full, "0");

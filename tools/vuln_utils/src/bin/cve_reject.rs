@@ -5,14 +5,14 @@
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use owo_colors::OwoColorize;
-use cve_utils::common;
-use cve_utils::cve_validation;
-use cve_utils::git_config;
-use cve_utils::print_git_error_details;
+use vuln_utils::common;
+use vuln_utils::cve_validation;
+use vuln_utils::git_config;
+use vuln_utils::print_git_error_details;
 use std::fs;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
-use cve_utils::cve_utils::extract_cve_id_from_path;
+use vuln_utils::vuln_utils::extract_cve_id_from_path;
 
 /// Reject a reserved or published CVE entry
 #[derive(Parser, Debug)]

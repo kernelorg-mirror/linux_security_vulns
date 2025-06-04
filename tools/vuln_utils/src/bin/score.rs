@@ -4,8 +4,8 @@
 
 use anyhow::{anyhow, Result};
 use clap::Parser;
-use cve_utils::common;
-use cve_utils::print_git_error_details;
+use vuln_utils::common;
+use vuln_utils::print_git_error_details;
 use indicatif::{ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};

@@ -5,11 +5,11 @@
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use owo_colors::OwoColorize;
-use cve_utils::common::{find_cve_by_sha, get_cve_root, get_kernel_tree};
-use cve_utils::cve_utils::find_next_free_cve_id;
-use cve_utils::git_utils::get_full_sha;
-use cve_utils::git_utils::{get_commit_details, get_commit_year};
-use cve_utils::print_git_error_details;
+use vuln_utils::common::{find_cve_by_sha, get_cve_root, get_kernel_tree};
+use vuln_utils::vuln_utils::find_next_free_cve_id;
+use vuln_utils::git_utils::get_full_sha;
+use vuln_utils::git_utils::{get_commit_details, get_commit_year};
+use vuln_utils::print_git_error_details;
 use log::error;
 use std::fs;
 use std::io::{BufRead, BufReader};
@@ -227,7 +227,7 @@ fn create_cve(git_sha: &str, requested_id: Option<&str>) -> Result<()> {
     let mbox_file = published_dir.join(format!("{cve_id}.mbox"));
 
     // Build bippy command with full path from vulns dir
-    let vulns_dir = match cve_utils::common::find_vulns_dir() {
+    let vulns_dir = match vuln_utils::common::find_vulns_dir() {
         Ok(dir) => dir,
         Err(e) => return Err(anyhow!("Failed to find vulns directory: {}", e)),
     };

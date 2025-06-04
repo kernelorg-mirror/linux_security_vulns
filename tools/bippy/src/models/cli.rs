@@ -9,9 +9,13 @@ use std::path::PathBuf;
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None, disable_version_flag = true, trailing_var_arg = true)]
 pub struct Args {
-    /// CVE number (e.g., "CVE-2021-1234")
-    #[clap(short, long)]
-    pub cve: Option<String>,
+    /// Provider type (e.g., "cve", "gsd", "euvd")
+    #[clap(short = 'p', long, default_value = "cve")]
+    pub provider: String,
+
+    /// Vulnerability ID (e.g., "CVE-2021-1234", "GSD-2021-1234")
+    #[clap(short = 'i', long)]
+    pub id: Option<String>,
 
     /// Git SHA(s) of the commit(s)
     #[clap(short, long, num_args = 1..)]
@@ -29,13 +33,13 @@ pub struct Args {
     #[clap(short, long)]
     pub mbox: Option<PathBuf>,
 
+    /// Diff file to apply to the commit text (optional)
+    #[clap(short, long)]
+    pub diff: Option<PathBuf>,
+
     /// Reference file path
     #[clap(short, long)]
     pub reference: Option<PathBuf>,
-
-    /// Message file path (overrides commit message)
-    #[clap(short = 'M', long)]
-    pub message: Option<PathBuf>,
 
     /// User email
     #[clap(short, long)]
@@ -52,4 +56,9 @@ pub struct Args {
     /// Catch any trailing arguments
     #[clap(hide = true)]
     pub remaining_parameters: Vec<String>,
+
+    // Legacy support
+    /// CVE number (deprecated: use --id instead)
+    #[clap(short = 'c', long, hide = true)]
+    pub cve: Option<String>,
 }

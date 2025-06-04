@@ -5,10 +5,10 @@
 use anyhow::{Context, Result};
 use clap::Parser;
 use owo_colors::OwoColorize;
-use ::cve_utils::common;
-use ::cve_utils::git_utils;
-use ::cve_utils::cve_utils;
-use ::cve_utils::print_git_error_details;
+use ::vuln_utils::common;
+use ::vuln_utils::git_utils;
+use ::vuln_utils::vuln_utils;
+use ::vuln_utils::print_git_error_details;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
@@ -130,7 +130,7 @@ fn publish_json_files(dry_run: bool) -> Result<()> {
     // Process each file
     for file_path in &modified_files {
         // Extract CVE ID from the file path
-        let cve_id = cve_utils::extract_cve_id_from_path(file_path)?;
+        let cve_id = vuln_utils::extract_cve_id_from_path(file_path)?;
 
         // Get the associated SHA1 file
         let sha1_file = file_path.with_extension("sha1");
@@ -193,7 +193,7 @@ fn publish_mbox_files(dry_run: bool) -> Result<()> {
     // Print list of files that will be sent
     for file_path in &mbox_files {
         // Extract CVE ID from the file path
-        let cve_id = cve_utils::extract_cve_id_from_path(file_path)?;
+        let cve_id = vuln_utils::extract_cve_id_from_path(file_path)?;
 
         // Get the associated SHA1 file
         let sha1_file = file_path.with_extension("sha1");
@@ -264,17 +264,17 @@ mod tests {
         // Test with a JSON file
         let json_path = temp_path.join(format!("{}.json", cve_id));
         fs::write(&json_path, "test content").unwrap();
-        assert_eq!(cve_utils::extract_cve_id_from_path(&json_path).unwrap(), cve_id);
+        assert_eq!(vuln_utils::extract_cve_id_from_path(&json_path).unwrap(), cve_id);
 
         // Test with a mbox file
         let mbox_path = temp_path.join(format!("{}.mbox", cve_id));
         fs::write(&mbox_path, "test content").unwrap();
-        assert_eq!(cve_utils::extract_cve_id_from_path(&mbox_path).unwrap(), cve_id);
+        assert_eq!(vuln_utils::extract_cve_id_from_path(&mbox_path).unwrap(), cve_id);
 
         // Test with a rejected mbox file
         let rejected_path = temp_path.join(format!("{}.mbox.rejected", cve_id));
         fs::write(&rejected_path, "test content").unwrap();
-        assert_eq!(cve_utils::extract_cve_id_from_path(&rejected_path).unwrap(), cve_id);
+        assert_eq!(vuln_utils::extract_cve_id_from_path(&rejected_path).unwrap(), cve_id);
     }
 
     #[test]

@@ -4,8 +4,8 @@
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use cve_utils::git_config;
-use cve_utils::git_utils::{get_object_full_sha, resolve_reference, get_affected_files};
+use vuln_utils::git_config;
+use vuln_utils::git_utils::{get_object_full_sha, resolve_reference, get_affected_files};
 use git2::Repository;
 use log::{debug, error, warn};
 use std::env;
@@ -13,9 +13,10 @@ use std::path::{Path, PathBuf};
 
 mod commands;
 mod models;
+mod providers;
 mod utils;
 
-use commands::{generate_json, generate_mbox, json::CveRecordParams, mbox::MboxParams};
+use commands::{json::VulnRecordParams, mbox::MboxParams};
 use models::{Args, DyadEntry};
 use utils::{
     get_commit_subject, get_commit_text, read_message_file, read_tags_file,
@@ -49,7 +50,7 @@ fn log_command_args() {
 }
 
 /// Type alias for argument validation return value
-type ArgsResult = (String, String, String, Vec<String>, Vec<String>);
+type ArgsResult = (String, String, String, String, Vec<String>, Vec<String>);
 
 /// Validate command line arguments and environment variables
 fn validate_args_and_env(args: &Args) -> ArgsResult {
@@ -62,11 +63,16 @@ fn validate_args_and_env(args: &Args) -> ArgsResult {
         std::process::exit(1);
     }
 
-    // Check for required arguments
-    if args.cve.is_none() {
-        error!("Missing required argument: cve");
+    // Get provider type
+    let provider_type = args.provider.clone();
+
+    // Get vulnerability ID - support both new --id and legacy --cve
+    let vuln_id = args.id.clone().or_else(|| args.cve.clone());
+    if vuln_id.is_none() {
+        error!("Missing required argument: id (or cve for legacy support)");
         std::process::exit(1);
     }
+    let vuln_id = vuln_id.unwrap();
 
     if args.sha.is_empty() {
         error!("Missing required argument: sha");
@@ -78,11 +84,17 @@ fn validate_args_and_env(args: &Args) -> ArgsResult {
         std::process::exit(1);
     }
 
-    // Check for CVE_USER environment variable if user is not specified
+    // Get the user env var based on provider (for CVE it's CVE_USER)
+    let user_env_var = match provider_type.as_str() {
+        "cve" => "CVE_USER",
+        _ => "VULN_USER",
+    };
+
+    // Check for user environment variable if user is not specified
     let user_email = args.user.as_ref().map_or_else(
         || {
-            env::var("CVE_USER").unwrap_or_else(|_| {
-                error!("Missing required argument: user (-u/--user) and CVE_USER environment variable is not set");
+            env::var(user_env_var).unwrap_or_else(|_| {
+                error!("Missing required argument: user (-u/--user) and {user_env_var} environment variable is not set");
                 std::process::exit(1);
             })
         },
@@ -97,7 +109,6 @@ fn validate_args_and_env(args: &Args) -> ArgsResult {
     }
 
     // Extract values from args
-    let cve_number = args.cve.as_ref().unwrap().clone();
     let git_shas: Vec<String> = args
         .sha
         .iter()
@@ -124,21 +135,22 @@ fn validate_args_and_env(args: &Args) -> ArgsResult {
         .unwrap_or_else(|| git_config::get_git_config("user.name").unwrap_or_default());
 
     // Debug output if verbose is enabled
-    debug!("CVE_NUMBER={cve_number}");
+    debug!("PROVIDER={provider_type}");
+    debug!("VULN_ID={vuln_id}");
     debug!("GIT_SHAS={git_shas:?}");
     debug!("JSON_FILE={:?}", args.json);
     debug!("MBOX_FILE={:?}", args.mbox);
     debug!("REFERENCE_FILE={:?}", args.reference);
     debug!("GIT_VULNERABLE={vulnerable_shas:?}");
 
-    (cve_number, user_name, user_email, git_shas, vulnerable_shas)
+    (provider_type, vuln_id, user_name, user_email, git_shas, vulnerable_shas)
 }
 
 /// Get repository and script directories
 fn get_directories() -> Result<(String, PathBuf, String, String)> {
-    // Get vulns directory using cve_utils
+    // Get vulns directory using vuln_utils
     let vulns_dir =
-        cve_utils::find_vulns_dir().with_context(|| "Failed to find vulns directory")?;
+        vuln_utils::find_vulns_dir().with_context(|| "Failed to find vulns directory")?;
 
     // Get scripts directory
     let script_dir = vulns_dir.join("scripts");
@@ -311,7 +323,8 @@ fn read_additional_references(reference_path: Option<PathBuf>) -> Vec<String> {
 
 /// Output parameters for generating files
 struct OutputParams<'a> {
-    cve_number: &'a str,
+    provider_type: &'a str,
+    vuln_id: &'a str,
     git_sha_full: &'a str,
     commit_subject: &'a str,
     user_name: &'a str,
@@ -334,7 +347,8 @@ fn generate_output_files(
     if let Some(path) = mbox_path {
         // Create MboxParams from OutputParams
         let mbox_params = MboxParams {
-            cve_number: params.cve_number,
+            provider_type: params.provider_type,
+            vuln_id: params.vuln_id,
             git_sha_full: params.git_sha_full,
             commit_subject: params.commit_subject,
             user_name: params.user_name,
@@ -347,20 +361,26 @@ fn generate_output_files(
             affected_files: params.affected_files,
         };
 
-        let mbox_content = generate_mbox(&mbox_params);
-
-        if let Err(err) = std::fs::write(path, mbox_content) {
-            error!("Warning: Failed to write mbox file to {}: {err}", path.display());
-        } else {
-            debug!("Wrote mbox file to {path}", path = path.display());
+        match commands::mbox::generate_mbox(&mbox_params) {
+            Ok(mbox_content) => {
+                if let Err(err) = std::fs::write(path, mbox_content) {
+                    error!("Warning: Failed to write mbox file to {}: {err}", path.display());
+                } else {
+                    debug!("Wrote mbox file to {path}", path = path.display());
+                }
+            }
+            Err(err) => {
+                error!("Error: Failed to generate mbox: {err}");
+            }
         }
     }
 
     // Generate JSON file if requested
     if let Some(path) = json_path {
-        // Create CveRecordParams from OutputParams
-        let json_params = CveRecordParams {
-            cve_number: params.cve_number,
+        // Create VulnRecordParams from OutputParams
+        let json_params = VulnRecordParams {
+            provider_type: params.provider_type,
+            vuln_id: params.vuln_id,
             git_sha_full: params.git_sha_full,
             commit_subject: params.commit_subject,
             user_name: params.user_name,
@@ -373,7 +393,7 @@ fn generate_output_files(
             affected_files: params.affected_files,
         };
 
-        match generate_json(&json_params) {
+        match commands::json::generate_json(&json_params) {
             Ok(json_record) => {
                 if let Err(err) = std::fs::write(path, json_record) {
                     error!("Warning: Failed to write JSON file to {}: {err}", path.display());
@@ -400,7 +420,7 @@ fn main() -> Result<()> {
     log_command_args();
 
     // Validate arguments and environment variables
-    let (cve_number, user_name, user_email, git_shas, vulnerable_shas) =
+    let (provider_type, vuln_id, user_name, user_email, git_shas, vulnerable_shas) =
         validate_args_and_env(&args);
 
     // Get required directories and script information
@@ -410,7 +430,7 @@ fn main() -> Result<()> {
     let (git_sha_full, commit_subject, raw_commit_text, affected_files) = get_commit_info(&kernel_tree, &git_shas)?;
 
     // Process commit text
-    let commit_text = process_commit_text(&script_dir, &raw_commit_text, args.message.as_deref());
+    let commit_text = process_commit_text(&script_dir, &raw_commit_text, args.diff.as_deref());
 
     // Run dyad and parse its output
     let dyad_entries = run_dyad_and_parse(&script_dir, &git_shas, &vulnerable_shas);
@@ -429,7 +449,7 @@ fn main() -> Result<()> {
         is_vulnerable = true;
     }
     if !is_vulnerable {
-        error!("Despite having some vulnerable:fixed kernels, none were in an actual release, so aborting and not assigning a CVE to {git_sha_full}");
+        error!("Despite having some vulnerable:fixed kernels, none were in an actual release, so aborting and not assigning a vulnerability ID to {git_sha_full}");
         std::process::exit(1);
     }
 
@@ -438,7 +458,8 @@ fn main() -> Result<()> {
 
     // Create output parameters
     let output_params = OutputParams {
-        cve_number: &cve_number,
+        provider_type: &provider_type,
+        vuln_id: &vuln_id,
         git_sha_full: &git_sha_full,
         commit_subject: &commit_subject,
         user_name: &user_name,
@@ -464,7 +485,7 @@ fn main() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cve_utils::version_utils::{version_is_mainline, version_is_queue, version_is_rc};
+    use vuln_utils::version_utils::{version_is_mainline, version_is_queue, version_is_rc};
     use std::fs::File;
     use std::io::Write;
     use tempfile::tempdir;
@@ -569,17 +590,6 @@ mod tests {
             utils::version::determine_default_status(&entries),
             "affected"
         );
-
-        // Test with invalid git id
-        /* FIXME, does not build, but you get the idea of what we should be testing...
-        match DyadEntry::new("5.10:abcdef123456:5.15:11c52d250b34a0862edc29db03fbec23b30db6da") {
-            Ok(d) => {
-                assert_eq!(0, 0);
-            }
-            Err(e) => {
-                assert_eq!(e, Err(InvalidDyadGitId("abcdef123456")));
-            }
-        } */
 
         // Test with mainline vulnerable version that's different from the fixed version
         let entries = vec![
@@ -747,7 +757,7 @@ mod tests {
         file.write_all(uuid_content.as_bytes()).unwrap();
 
         // Test reading the UUID file
-        let uuid = utils::file::read_uuid(dir.path()).unwrap();
+        let uuid = utils::file::read_uuid(dir.path(), "linux.uuid").unwrap();
         assert_eq!(uuid, "12345678-abcd-efgh-ijkl-mnopqrstuvwx");
 
         // Test with empty file
@@ -755,7 +765,7 @@ mod tests {
         let empty_path = dir.path().join("linux.uuid");
         let mut file = File::create(&empty_path).unwrap();
         file.write_all(b"").unwrap();
-        let result = utils::file::read_uuid(dir.path());
+        let result = utils::file::read_uuid(dir.path(), "linux.uuid");
         assert!(result.is_err());
     }
 

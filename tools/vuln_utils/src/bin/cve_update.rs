@@ -3,10 +3,10 @@
 // Copyright (c) 2025 - Sasha Levin <sashal@kernel.org>
 
 use anyhow::{anyhow, Context, Result};
-use cve_utils::print_git_error_details;
-use cve_utils::cve_validation::find_cve_id;
-use cve_utils::year_utils::{is_valid_year, is_year_dir_exists};
-use cve_utils::common;
+use vuln_utils::print_git_error_details;
+use vuln_utils::cve_validation::find_cve_id;
+use vuln_utils::year_utils::{is_valid_year, is_year_dir_exists};
+use vuln_utils::common;
 use std::path::{Path, PathBuf};
 use std::thread;
 use std::sync::{Arc, Mutex};
@@ -528,7 +528,7 @@ mod tests {
     use tempfile::tempdir;
     use std::io::Write;
     use std::fs::File;
-    use cve_utils::cve_validation::extract_year_from_cve;
+    use vuln_utils::cve_validation::extract_year_from_cve;
 
     #[test]
     fn test_is_valid_year() {

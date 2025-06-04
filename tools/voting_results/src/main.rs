@@ -2,6 +2,8 @@
 //
 // Copyright (c) 2025 - Sasha Levin <sashal@kernel.org>
 
+extern crate vuln_utils;
+
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use git2::Repository;
@@ -99,8 +101,8 @@ impl VotingResults {
             }
         }
 
-        // Use the standard cve_utils implementation to find the vulns directory
-        let vulns_dir = cve_utils::find_vulns_dir()?;
+        // Use the standard vuln_utils implementation to find the vulns directory
+        let vulns_dir = vuln_utils::find_vulns_dir()?;
         let proposed_dir = vulns_dir.join("cve").join("review").join("proposed");
         let script_dir = vulns_dir.join("scripts");
 
@@ -351,7 +353,7 @@ impl VotingResults {
                 .path()
                 .parent()
                 .unwrap_or_else(|| self.repo.path());
-            match cve_utils::git_utils::get_full_sha(repo_path, short_stable_sha) {
+            match vuln_utils::git_utils::get_full_sha(repo_path, short_stable_sha) {
                 Ok(full_sha) => match git2::Oid::from_str(&full_sha) {
                     Ok(oid) => self.repo.find_commit(oid),
                     Err(_) => return stable_sha.to_string(),

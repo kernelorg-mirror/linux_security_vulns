@@ -14,7 +14,7 @@
 use log::{debug, error};
 use owo_colors::{OwoColorize, Stream::Stdout};
 use std::env;
-extern crate cve_utils;
+extern crate vuln_utils;
 
 mod cli;
 mod kernel;
