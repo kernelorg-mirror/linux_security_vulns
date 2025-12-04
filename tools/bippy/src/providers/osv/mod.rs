@@ -30,10 +30,7 @@ impl VulnerabilityProvider for OsvProvider {
     }
 
     fn generate_mbox(&self, _params: &VulnerabilityRecordParams) -> Result<String> {
-        // Generate a simple plain text mbox format
-        let mbox = "Not Supported".to_string();
-
-        Ok(mbox)
+        Err(anyhow::anyhow!("OSV provider does not support mbox generation"))
     }
 
     fn name(&self) -> &'static str {
@@ -45,13 +42,11 @@ impl VulnerabilityProvider for OsvProvider {
     }
 
     fn validate_id(&self, id: &str) -> Result<()> {
-        if id.starts_with("CVE-") && id.len() > 4 {
-            Ok(())
+        // OSV format accepts various vulnerability ID formats (CVE, GHSA, etc.)
+        if id.is_empty() {
+            Err(anyhow::anyhow!("Vulnerability ID cannot be empty"))
         } else {
-            Err(anyhow::anyhow!(
-                "Invalid CVE ID format: {}. Expected format: CVE-YYYY-NNNN",
-                id
-            ))
+            Ok(())
         }
     }
 }
