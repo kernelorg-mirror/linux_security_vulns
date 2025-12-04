@@ -9,7 +9,7 @@ use std::path::PathBuf;
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None, disable_version_flag = true, trailing_var_arg = true)]
 pub struct Args {
-    /// Provider type (available: cve, plain)
+    /// Provider type (available: cve, osv, plain)
     #[clap(short = 'p', long, default_value = "cve")]
     pub provider: String,
 
