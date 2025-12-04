@@ -132,6 +132,6 @@ pub enum SeverityType {
     CvssV2,
     CvssV3,
     CvssV31,
-    Cvss4,
+    CvssV4,
     Other,
 }
