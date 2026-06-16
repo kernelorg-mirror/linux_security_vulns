@@ -20,6 +20,7 @@ pub mod git;
 pub mod json;
 pub mod mbox;
 pub mod policy;
+pub mod symbool;
 pub mod text;
 pub mod version;
 
