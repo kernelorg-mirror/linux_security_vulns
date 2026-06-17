@@ -20,7 +20,7 @@ use commands::{generate_json, generate_mbox, json::CveRecordParams, mbox::MboxPa
 use models::{Args, CvssMetric, CvssV31, DyadEntry};
 use utils::{
     get_commit_subject, get_commit_text, read_message_file, read_tags_file,
-    run_dyad, strip_commit_text,
+    run_dyad, run_symbool, strip_commit_text,
 };
 
 /// Initialize and configure the logging system
@@ -264,6 +264,29 @@ fn run_dyad_and_parse(
     dyad_entries
 }
 
+/// Run symbool and parse its output into a vector of symbols
+fn run_symbool_and_parse(
+    script_dir: &Path,
+    git_shas: &[String],
+) -> Vec<String> {
+    let symbool_data = match run_symbool(script_dir, git_shas) {
+        Ok(data) => data,
+        Err(err) => {
+            warn!("Warning: Failed to run symbool: {err:?}");
+            String::new()
+        }
+    };
+
+    let mut symbool_output: Vec<String> = Vec::new();
+    if !symbool_data.is_empty() {
+        for line in symbool_data.lines() {
+            symbool_output.push(line.to_string());
+        }
+    }
+
+    symbool_output
+}
+
 /// Read additional references from a file if specified
 fn read_additional_references(reference_path: Option<PathBuf>) -> Vec<String> {
     reference_path.map_or_else(
@@ -470,6 +493,9 @@ fn main() -> Result<()> {
 
     // Run dyad and parse its output
     let dyad_entries = run_dyad_and_parse(&script_dir, &git_shas, &vulnerable_shas);
+
+    // Run symbool to get the affected files
+    let _affected_symbols = run_symbool_and_parse(&script_dir, &git_shas);
 
     // Check CVE issuance policy - logs error if no released version was affected
     // (see policy.rs for detailed documentation)
