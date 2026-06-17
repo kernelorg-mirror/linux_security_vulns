@@ -35,6 +35,7 @@ use cve::{CvssMetric, CvssV31, Scenario};
 use dyad::run_dyad;
 use file::{read_message_file, read_tags_file};
 use git::{get_commit_subject, get_commit_text};
+use symbool::run_symbool;
 
 /// The tool name recorded in the generated output (the json `x_generator`
 /// engine field and the mbox From line), together with `ENGINE_VERSION`.
@@ -228,6 +229,29 @@ fn run_dyad_and_parse(git_shas: &[String], vulnerable_shas: &[String]) -> Vec<Dy
     dyad_entries
 }
 
+/// Run symbool and parse its output into a vector of symbols
+fn run_symbool_and_parse(
+    script_dir: &Path,
+    git_shas: &[String],
+) -> Vec<String> {
+    let symbool_data = match run_symbool(script_dir, git_shas) {
+        Ok(data) => data,
+        Err(err) => {
+            warn!("Warning: Failed to run symbool: {err:?}");
+            String::new()
+        }
+    };
+
+    let mut symbool_output: Vec<String> = Vec::new();
+    if !symbool_data.is_empty() {
+        for line in symbool_data.lines() {
+            symbool_output.push(line.to_string());
+        }
+    }
+
+    symbool_output
+}
+
 /// Read additional references from a file if specified
 fn read_additional_references(reference_path: Option<&Path>) -> Vec<String> {
     reference_path.map_or_else(
@@ -355,6 +379,9 @@ pub fn generate(req: &GenerateRequest) -> Result<GeneratedRecord> {
 
     // Run dyad and parse its output
     let dyad_entries = run_dyad_and_parse(req.fixing_shas, req.vulnerable_shas);
+
+    // Run symbool to get the affected files
+    let _affected_symbols = run_symbool_and_parse(script_dir, req.fixing_shas);
 
     // Check CVE issuance policy - logs error if no released version was affected
     // (see policy.rs for detailed documentation)
