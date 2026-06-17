@@ -17,7 +17,7 @@ pub fn run_symbool(
     let symbool_script = script_dir.join("symbool");
     if !symbool_script.exists() {
         return Err(anyhow::anyhow!(
-            "symbool program  not found at {}",
+            "symbool program not found at {}",
             symbool_script.display()
         ));
     }
@@ -46,7 +46,7 @@ pub fn run_symbool(
     // Execute the command
     let output = command
         .output()
-        .with_context(|| format!("Failed to execute dyad script at {}", symbool_script.display()))?;
+        .with_context(|| format!("Failed to execute 'symbool' at {}", symbool_script.display()))?;
 
     // Check for success
     if !output.status.success() {
@@ -54,7 +54,7 @@ pub fn run_symbool(
         let stdout = String::from_utf8_lossy(&output.stdout);
 
         let status = output.status;
-        let mut error_msg = format!("Dyad script failed with status: {status}");
+        let mut error_msg = format!("'symbool' failed with status: {status}");
 
         if !stderr.is_empty() {
             write!(error_msg, "\nStderr: {stderr}").unwrap();
