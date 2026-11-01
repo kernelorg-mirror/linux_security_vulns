@@ -146,7 +146,10 @@ fn rejects_a_rationale_that_disagrees_with_the_vector() {
         .failure()
         .stderr(predicate::str::contains("AV"));
 
-    assert!(!repo.cvss_path().exists(), "nothing should have been written");
+    assert!(
+        !repo.cvss_path().exists(),
+        "nothing should have been written"
+    );
 }
 
 #[test]
@@ -237,7 +240,10 @@ fn rejects_a_rationale_too_long_for_the_record() {
     // Complete and correct, but past what scenarios[].value will hold.
     let padded = rationale().replace(
         "AV:L - reachable only through local file I/O",
-        &format!("AV:L - reachable only through local file I/O {}", "word ".repeat(1000)),
+        &format!(
+            "AV:L - reachable only through local file I/O {}",
+            "word ".repeat(1000)
+        ),
     );
     let rationale_file = repo.write_rationale(&padded);
 

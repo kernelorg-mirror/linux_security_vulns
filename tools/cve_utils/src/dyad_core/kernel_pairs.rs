@@ -131,16 +131,17 @@ fn find_best_mainline_match(
 
     for vuln in mainline_vulns {
         if let Some(distance) = calculate_version_distance(vuln, fixed_kernel)
-            && distance < best_match_score {
-                best_match_score = distance;
-                best_match = Some(vuln);
-                debug!(
-                    "\t\t\tFound better mainline match: {} -> {} (score: {})",
-                    vuln.version(),
-                    fixed_kernel.version(),
-                    distance
-                );
-            }
+            && distance < best_match_score
+        {
+            best_match_score = distance;
+            best_match = Some(vuln);
+            debug!(
+                "\t\t\tFound better mainline match: {} -> {} (score: {})",
+                vuln.version(),
+                fixed_kernel.version(),
+                distance
+            );
+        }
     }
 
     if let Some(best_vuln) = best_match {
@@ -183,16 +184,17 @@ fn find_best_version_match(
 
     for vuln in vulnerabilities {
         if let Some(distance) = calculate_version_distance(vuln, fixed_kernel)
-            && distance < best_match_score {
-                best_match_score = distance;
-                best_match = Some(vuln);
-                debug!(
-                    "\t\t\tFound better version match: {} -> {} (score: {})",
-                    vuln.version(),
-                    fixed_kernel.version(),
-                    distance
-                );
-            }
+            && distance < best_match_score
+        {
+            best_match_score = distance;
+            best_match = Some(vuln);
+            debug!(
+                "\t\t\tFound better version match: {} -> {} (score: {})",
+                vuln.version(),
+                fixed_kernel.version(),
+                distance
+            );
+        }
     }
 
     if let Some(vuln) = best_match {
@@ -244,8 +246,8 @@ fn find_default_match(
 /// Uses pre-built `HashSets` for O(1) membership checks instead of O(n) scans.
 fn process_unfixed_vulnerabilities(
     vulnerable_kernel: &Kernel,
-    paired_vuln_keys: &HashSet<(String, String)>,  // (version, git_id) of already-paired vulns
-    paired_fixed_versions: &HashSet<String>,        // versions of already-paired fixes
+    paired_vuln_keys: &HashSet<(String, String)>, // (version, git_id) of already-paired vulns
+    paired_fixed_versions: &HashSet<String>,      // versions of already-paired fixes
     fixed_set: &[Kernel],
 ) -> Option<KernelPair> {
     // O(1) check if this vulnerability is already part of a pair
@@ -315,8 +317,10 @@ pub fn generate_kernel_pairs(state: &DyadState) -> Vec<KernelPair> {
     for (vuln_kernel, fix_kernel) in &state.revert_pairs {
         debug!(
             "Adding revert-based pair directly: {} ({}) -> {} ({})",
-            vuln_kernel.version(), vuln_kernel.git_id(),
-            fix_kernel.version(), fix_kernel.git_id()
+            vuln_kernel.version(),
+            vuln_kernel.git_id(),
+            fix_kernel.version(),
+            fix_kernel.git_id()
         );
         fixed_pairs.push(KernelPair {
             vulnerable: vuln_kernel.clone(),
@@ -333,7 +337,8 @@ pub fn generate_kernel_pairs(state: &DyadState) -> Vec<KernelPair> {
     // Pre-compute sorted vulnerabilities and mainline vulns ONCE before the loop.
     // This avoids redundant sorting and filtering on every iteration.
     let sorted_vulnerabilities: Vec<Kernel> = {
-        let mut vulns: Vec<Kernel> = state.vulnerable_set
+        let mut vulns: Vec<Kernel> = state
+            .vulnerable_set
             .iter()
             .filter(|k| !revert_fixed_vuln_ids.contains(&k.git_id()))
             .cloned()
@@ -413,10 +418,8 @@ pub fn generate_kernel_pairs(state: &DyadState) -> Vec<KernelPair> {
         .iter()
         .map(|p| (p.vulnerable.version(), p.vulnerable.git_id()))
         .collect();
-    let mut paired_fixed_versions: HashSet<String> = fixed_pairs
-        .iter()
-        .map(|p| p.fixed.version())
-        .collect();
+    let mut paired_fixed_versions: HashSet<String> =
+        fixed_pairs.iter().map(|p| p.fixed.version()).collect();
 
     // Process unfixed vulnerabilities (skip those already fixed by revert)
     for vuln in &state.vulnerable_set {
@@ -552,4 +555,3 @@ pub fn filter_and_sort_pairs(pairs: Vec<KernelPair>) -> Vec<KernelPair> {
 
     filtered_pairs
 }
-

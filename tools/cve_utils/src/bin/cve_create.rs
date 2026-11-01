@@ -2,15 +2,15 @@
 //
 // Copyright (c) 2025 - Sasha Levin <sashal@kernel.org>
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use clap::Parser;
-use owo_colors::OwoColorize;
 use cve_utils::common::{find_cve_by_sha, get_cve_root, get_kernel_tree};
 use cve_utils::cve_utils::find_next_free_cve_id;
 use cve_utils::git_utils::get_full_sha;
 use cve_utils::git_utils::{get_commit_details, get_commit_year};
 use cve_utils::print_git_error_details;
 use log::error;
+use owo_colors::OwoColorize;
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
@@ -60,11 +60,12 @@ fn main() {
 
     // Process a single Git SHA
     if let Some(git_sha) = args.git_sha
-        && let Err(e) = create_cve(&git_sha, args.cve_id.as_deref()) {
-            error!("Error creating CVE: {e}");
-            print_git_error_details(&e);
-            std::process::exit(1);
-        }
+        && let Err(e) = create_cve(&git_sha, args.cve_id.as_deref())
+    {
+        error!("Error creating CVE: {e}");
+        print_git_error_details(&e);
+        std::process::exit(1);
+    }
 }
 
 /// Process a batch file containing Git SHAs
@@ -478,10 +479,11 @@ mod tests {
             if file.is_file() && file.to_string_lossy().ends_with(".sha1") {
                 let content = fs::read_to_string(&file).unwrap();
                 if content.trim() == git_sha
-                    && let Some(file_name) = file.file_stem() {
-                        found_cve = Some(file_name.to_string_lossy().into_owned());
-                        break;
-                    }
+                    && let Some(file_name) = file.file_stem()
+                {
+                    found_cve = Some(file_name.to_string_lossy().into_owned());
+                    break;
+                }
             }
         }
 

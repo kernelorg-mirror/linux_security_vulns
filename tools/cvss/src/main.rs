@@ -7,7 +7,7 @@
 mod output;
 mod scoring;
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use clap::Parser;
 use log::debug;
 use std::fs;
@@ -80,8 +80,8 @@ fn initialize_logging(verbose: bool) {
 /// Find the CVE path using `cve_utils` library functions, return the base path
 /// (without extension) for writing .cvss file.
 fn find_cve_base_path(cve_id: &str) -> Result<PathBuf> {
-    let sha1_path = cve_validation::find_cve_id(cve_id)?
-        .ok_or_else(|| anyhow!("CVE '{cve_id}' not found"))?;
+    let sha1_path =
+        cve_validation::find_cve_id(cve_id)?.ok_or_else(|| anyhow!("CVE '{cve_id}' not found"))?;
     Ok(sha1_path.with_extension("cvss"))
 }
 
@@ -126,7 +126,10 @@ fn process_single(cve_id: &str, vector_str: &str, args: &Args) -> Result<()> {
 
     // A rationale on the command line wins; otherwise keep whatever the file
     // already had, so re-scoring does not silently discard the explanation.
-    let existing = cvss_path.exists().then(|| CvssFile::read(&cvss_path)).transpose()?;
+    let existing = cvss_path
+        .exists()
+        .then(|| CvssFile::read(&cvss_path))
+        .transpose()?;
     let rationale = match &args.rationale {
         Some(path) => Some(read_rationale(path)?),
         None => existing.as_ref().and_then(|file| file.rationale.clone()),
@@ -232,7 +235,10 @@ fn check(paths: &[PathBuf], verbose: bool) -> Result<()> {
     }
 
     if failures > 0 {
-        bail!("{failures} of {} .cvss files failed validation", files.len());
+        bail!(
+            "{failures} of {} .cvss files failed validation",
+            files.len()
+        );
     }
 
     Ok(())

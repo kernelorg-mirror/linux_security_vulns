@@ -4,15 +4,18 @@
 // The embedding model and tokenizer are cached in RefCells, which makes the
 // futures that touch them !Send. They are awaited in place and never handed to
 // a spawned task, so that is fine.
-#![allow(clippy::future_not_send, reason = "futures are awaited in place, never spawned")]
+#![allow(
+    clippy::future_not_send,
+    reason = "futures are awaited in place, never spawned"
+)]
 
+use indicatif::{ProgressBar, ProgressStyle};
+use log::{debug, error, info, warn};
+use regex::Regex;
 use std::collections::HashMap;
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
-use log::{info, debug, warn, error};
-use regex::Regex;
-use indicatif::{ProgressBar, ProgressStyle};
 
 static FIXES_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)Fixes:\s*([a-f0-9]{12,40})").unwrap());
@@ -24,9 +27,18 @@ static DECISION_PATTERNS: LazyLock<[(Regex, &'static str); 5]> = LazyLock::new(|
     [
         (Regex::new(r"ANSWER:\s*(YES|NO)").unwrap(), "ANSWER: format"),
         (Regex::new(r"^\s*(YES|NO)\b").unwrap(), "Start of response"),
-        (Regex::new(r"ANSWER\s+(?:IS|:)\s*(YES|NO)").unwrap(), "ANSWER IS/: format"),
-        (Regex::new(r"(YES|NO)\s*(?:\n|$|EXPLANATION|:)").unwrap(), "GPT-4 style"),
-        (Regex::new(r"DECISION:\s*(YES|NO)").unwrap(), "DECISION: format"),
+        (
+            Regex::new(r"ANSWER\s+(?:IS|:)\s*(YES|NO)").unwrap(),
+            "ANSWER IS/: format",
+        ),
+        (
+            Regex::new(r"(YES|NO)\s*(?:\n|$|EXPLANATION|:)").unwrap(),
+            "GPT-4 style",
+        ),
+        (
+            Regex::new(r"DECISION:\s*(YES|NO)").unwrap(),
+            "DECISION: format",
+        ),
     ]
 });
 
@@ -195,13 +207,8 @@ Provide your answer as **YES** or **NO**, followed by a detailed explanation tha
 
 // Import from the commit-classifier library
 use commit_classifier::{
-    HuggingFaceEmbeddings,
-    ChromaStore,
-    Metadata,
-    Llm,
-    CommitFeatures,
+    ChromaStore, CommitFeatures, HuggingFaceEmbeddings, Llm, Metadata, PredictionResult,
     ProviderResult,
-    PredictionResult,
 };
 
 // ModelState from commit-classifier
@@ -226,7 +233,7 @@ impl CVEClassifier {
         llm_providers: Vec<String>,
         llm_configs: Option<HashMap<String, serde_json::Value>>,
         persist_directory: Option<&Path>,
-        repo_path: Option<&Path>
+        repo_path: Option<&Path>,
     ) -> Self {
         let default_configs = Self::create_default_llm_configs();
 
@@ -306,36 +313,48 @@ impl CVEClassifier {
         let mut configs = HashMap::new();
 
         // Claude default config
-        configs.insert("claude".to_string(), serde_json::json!({
-            "model": "claude-3-7-sonnet-20250219",
-            "temperature": 0,
-            "max_tokens": 4000,
-            "debug_logging": false
-        }));
+        configs.insert(
+            "claude".to_string(),
+            serde_json::json!({
+                "model": "claude-3-7-sonnet-20250219",
+                "temperature": 0,
+                "max_tokens": 4000,
+                "debug_logging": false
+            }),
+        );
 
         // NVIDIA default config
-        configs.insert("nvidia".to_string(), serde_json::json!({
-            "model_type": "deepseek",
-            "temperature": 0.6,
-            "max_tokens": 4096
-        }));
+        configs.insert(
+            "nvidia".to_string(),
+            serde_json::json!({
+                "model_type": "deepseek",
+                "temperature": 0.6,
+                "max_tokens": 4096
+            }),
+        );
 
         // OpenAI default config
-        configs.insert("openai".to_string(), serde_json::json!({
-            "model_type": "gpt4o",
-            "temperature": 0.2,
-            "max_tokens": 4096,
-            "debug_logging": false
-        }));
+        configs.insert(
+            "openai".to_string(),
+            serde_json::json!({
+                "model_type": "gpt4o",
+                "temperature": 0.2,
+                "max_tokens": 4096,
+                "debug_logging": false
+            }),
+        );
 
         // Ollama default config
-        configs.insert("ollama".to_string(), serde_json::json!({
-            "model_type": "llama3",
-            "temperature": 0.1,
-            "max_tokens": 4096,
-            "api_host": "http://localhost:11434",
-            "debug_logging": false
-        }));
+        configs.insert(
+            "ollama".to_string(),
+            serde_json::json!({
+                "model_type": "llama3",
+                "temperature": 0.1,
+                "max_tokens": 4096,
+                "api_host": "http://localhost:11434",
+                "debug_logging": false
+            }),
+        );
 
         configs
     }
@@ -345,16 +364,16 @@ impl CVEClassifier {
     pub fn new_for_prompt(
         llm_providers: Vec<String>,
         llm_configs: Option<HashMap<String, serde_json::Value>>,
-        repo_path: Option<&Path>
+        repo_path: Option<&Path>,
     ) -> Self {
         // Initialize with the standard constructor but no persist_directory
         Self::new(llm_providers, llm_configs, None, repo_path)
     }
 
-        // Helper to process a single commit feature into training data
+    // Helper to process a single commit feature into training data
     fn process_commit_to_training_data(
         commit: &CommitFeatures,
-        max_chunk_length: usize
+        max_chunk_length: usize,
     ) -> (String, HashMap<String, String>) {
         // Extract subject and message body
         let message_lines: Vec<&str> = commit.message.trim().lines().collect();
@@ -373,8 +392,16 @@ impl CVEClassifier {
 
         // Add code changes
         let diff_text = if commit.diff.len() > max_chunk_length {
-            let truncated = commit.diff.chars().take(max_chunk_length).collect::<String>();
-            warn!("Truncating large diff for commit {} (size: {})", commit.sha, commit.diff.len());
+            let truncated = commit
+                .diff
+                .chars()
+                .take(max_chunk_length)
+                .collect::<String>();
+            warn!(
+                "Truncating large diff for commit {} (size: {})",
+                commit.sha,
+                commit.diff.len()
+            );
             format!("{truncated}\n[... truncated due to size ...]")
         } else {
             commit.diff.clone()
@@ -398,8 +425,16 @@ impl CVEClassifier {
         commit_context.push(files_text);
 
         // Mark CVE status prominently
-        let cve_status = if commit.was_selected == Some(true) { "YES" } else { "NO" };
-        let text = format!("[CVE Status: {}]\n\n{}", cve_status, commit_context.join("\n\n"));
+        let cve_status = if commit.was_selected == Some(true) {
+            "YES"
+        } else {
+            "NO"
+        };
+        let text = format!(
+            "[CVE Status: {}]\n\n{}",
+            cve_status,
+            commit_context.join("\n\n")
+        );
 
         // Create metadata
         let mut metadata = HashMap::new();
@@ -409,7 +444,9 @@ impl CVEClassifier {
 
         // Add file paths joined with commas (limited to 10)
         if !commit.files_changed.is_empty() {
-            let file_list = commit.files_changed.iter()
+            let file_list = commit
+                .files_changed
+                .iter()
                 .take(10)
                 .cloned()
                 .collect::<Vec<String>>()
@@ -423,15 +460,19 @@ impl CVEClassifier {
     // Helper to process a batch of commit data with progress tracking
     fn process_commit_dataset(
         commit_dataset: &[CommitFeatures],
-        max_chunk_length: usize
+        max_chunk_length: usize,
     ) -> (Vec<String>, Vec<Metadata>) {
         let mut texts = Vec::new();
         let mut metadatas = Vec::new();
 
         let pb = ProgressBar::new(commit_dataset.len() as u64);
-        pb.set_style(ProgressStyle::default_bar()
-            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})")
-            .unwrap());
+        pb.set_style(
+            ProgressStyle::default_bar()
+                .template(
+                    "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})",
+                )
+                .unwrap(),
+        );
 
         for commit in commit_dataset {
             let (text, metadata) = Self::process_commit_to_training_data(commit, max_chunk_length);
@@ -459,7 +500,7 @@ impl CVEClassifier {
         &mut self,
         texts: &[String],
         metadatas: &[Metadata],
-        batch_size: usize
+        batch_size: usize,
     ) -> Result<usize, String> {
         let actual_batch_size = std::cmp::min(batch_size, texts.len());
         let batch_texts = texts[..actual_batch_size].to_vec();
@@ -470,16 +511,21 @@ impl CVEClassifier {
         self.vectorstore = match ChromaStore::from_texts(
             &batch_texts,
             &mut self.embeddings,
-            Some(&batch_metadatas.iter().map(|m| {
-                let mut map = HashMap::new();
-                for (k, v) in &m.extra {
-                    if let serde_json::Value::String(s) = v {
-                        map.insert(k.clone(), s.clone());
-                    }
-                }
-                map
-            }).collect::<Vec<_>>()),
-            self.persist_directory.as_deref()
+            Some(
+                &batch_metadatas
+                    .iter()
+                    .map(|m| {
+                        let mut map = HashMap::new();
+                        for (k, v) in &m.extra {
+                            if let serde_json::Value::String(s) = v {
+                                map.insert(k.clone(), s.clone());
+                            }
+                        }
+                        map
+                    })
+                    .collect::<Vec<_>>(),
+            ),
+            self.persist_directory.as_deref(),
         ) {
             Ok(vs) => Some(vs),
             Err(e) => return Err(format!("Failed to create vectorstore: {e}")),
@@ -494,16 +540,20 @@ impl CVEClassifier {
         texts: &[String],
         metadatas: &[Metadata],
         start_idx: usize,
-        batch_size: usize
+        batch_size: usize,
     ) {
         if start_idx >= texts.len() {
             return;
         }
 
         let pb = ProgressBar::new((texts.len() - start_idx) as u64);
-        pb.set_style(ProgressStyle::default_bar()
-            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})")
-            .unwrap());
+        pb.set_style(
+            ProgressStyle::default_bar()
+                .template(
+                    "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})",
+                )
+                .unwrap(),
+        );
 
         for batch_start in (start_idx..texts.len()).step_by(batch_size) {
             let batch_end = std::cmp::min(batch_start + batch_size, texts.len());
@@ -526,12 +576,17 @@ impl CVEClassifier {
 
     // Training statistics helper
     fn log_training_statistics(commit_dataset: &[CommitFeatures]) {
-        let cve_count = commit_dataset.iter()
+        let cve_count = commit_dataset
+            .iter()
             .filter(|c| c.was_selected == Some(true))
             .count();
 
-        info!("Training complete - indexed {} commits ({} with CVE, {} without CVE)",
-              commit_dataset.len(), cve_count, commit_dataset.len() - cve_count);
+        info!(
+            "Training complete - indexed {} commits ({} with CVE, {} without CVE)",
+            commit_dataset.len(),
+            cve_count,
+            commit_dataset.len() - cve_count
+        );
     }
 
     pub fn train(&mut self, commit_dataset: &[CommitFeatures]) -> Result<(), String> {
@@ -606,20 +661,18 @@ impl CVEClassifier {
         let persist_dir = match &model_state.persist_directory {
             Some(dir) => {
                 if !dir.exists() {
-                    return Err(format!("Persist directory does not exist: {}", dir.display()));
+                    return Err(format!(
+                        "Persist directory does not exist: {}",
+                        dir.display()
+                    ));
                 }
                 Some(dir.as_path())
-            },
+            }
             None => None,
         };
 
         // Create classifier
-        let mut classifier = Self::new(
-            vec!["claude".to_string()],
-            None,
-            persist_dir,
-            None,
-        );
+        let mut classifier = Self::new(vec!["claude".to_string()], None, persist_dir, None);
 
         // Try to load the vectorstore if persist directory is set
         if let Some(persist_dir) = persist_dir {
@@ -653,14 +706,21 @@ impl CVEClassifier {
 
         // Add files changed
         if !commit_info.files_changed.is_empty() {
-            let mut files_text = commit_info.files_changed.iter()
+            let mut files_text = commit_info
+                .files_changed
+                .iter()
                 .take(10)
                 .map(ToString::to_string)
                 .collect::<Vec<String>>()
                 .join(", ");
 
             if commit_info.files_changed.len() > 10 {
-                write!(files_text, " and {} more", commit_info.files_changed.len() - 10).unwrap();
+                write!(
+                    files_text,
+                    " and {} more",
+                    commit_info.files_changed.len() - 10
+                )
+                .unwrap();
             }
 
             commit_parts.push(format!("Files Changed: {files_text}"));
@@ -673,20 +733,29 @@ impl CVEClassifier {
         clippy::literal_string_with_formatting_args,
         reason = "placeholder names, not format! arguments"
     )]
-    pub fn construct_prompt(commit_text: &str, similar_commits: &[(String, bool)], fixes_context: Option<&str>) -> String {
+    pub fn construct_prompt(
+        commit_text: &str,
+        similar_commits: &[(String, bool)],
+        fixes_context: Option<&str>,
+    ) -> String {
         // Format the context from similar commits
         let mut context_parts = Vec::new();
 
         for (i, (content, has_cve)) in similar_commits.iter().enumerate() {
             if content.is_empty() {
-                continue;  // Skip empty content
+                continue; // Skip empty content
             }
 
             // Extract CVE status
             let cve_status = if *has_cve { "YES" } else { "NO" };
 
             // Add a clear separator with the similarity ranking and status
-            context_parts.push(format!("Similar Commit {} [CVE Status: {}]:\n{}", i+1, cve_status, content));
+            context_parts.push(format!(
+                "Similar Commit {} [CVE Status: {}]:\n{}",
+                i + 1,
+                cve_status,
+                content
+            ));
         }
 
         let context_text = context_parts.join("\n\n");
@@ -719,23 +788,26 @@ impl CVEClassifier {
 
         // Perform similarity search
         match vectorstore.similarity_search(commit_text, k) {
-            Ok(scored_docs) => {
-                scored_docs.into_iter()
-                    .map(|scored_doc| {
-                        let doc_text = scored_doc.document.text;
-                        let has_cve = scored_doc.document.metadata.extra.get("has_cve")
-                            .and_then(|v| {
-                                if let serde_json::Value::String(s) = v {
-                                    Some(s == "YES")
-                                } else {
-                                    None
-                                }
-                            })
-                            .unwrap_or(false);
-                        (doc_text, has_cve)
-                    })
-                    .collect()
-            },
+            Ok(scored_docs) => scored_docs
+                .into_iter()
+                .map(|scored_doc| {
+                    let doc_text = scored_doc.document.text;
+                    let has_cve = scored_doc
+                        .document
+                        .metadata
+                        .extra
+                        .get("has_cve")
+                        .and_then(|v| {
+                            if let serde_json::Value::String(s) = v {
+                                Some(s == "YES")
+                            } else {
+                                None
+                            }
+                        })
+                        .unwrap_or(false);
+                    (doc_text, has_cve)
+                })
+                .collect(),
             Err(e) => {
                 error!("Error performing similarity search: {e}");
                 Vec::new()
@@ -752,7 +824,7 @@ impl CVEClassifier {
                 match commit_classifier::create_llm(provider, config) {
                     Ok(llm) => {
                         llms.insert(provider.clone(), llm);
-                    },
+                    }
                     Err(e) => {
                         return Err(format!("Failed to initialize {provider} LLM: {e}"));
                     }
@@ -770,8 +842,13 @@ impl CVEClassifier {
     }
 
     // Helper method to invoke an LLM with retry logic for common error cases
-    async fn invoke_llm_with_retry(&self, llm: &dyn Llm, prompt: &str, provider: &str, verbose: bool)
-        -> Result<(bool, String, String), String> {
+    async fn invoke_llm_with_retry(
+        &self,
+        llm: &dyn Llm,
+        prompt: &str,
+        provider: &str,
+        verbose: bool,
+    ) -> Result<(bool, String, String), String> {
         // Maximum number of retries for errors
         let max_retries = 3;
         let mut retry_count = 0;
@@ -783,10 +860,13 @@ impl CVEClassifier {
                     let trimmed_response = response.trim().to_lowercase();
                     if trimmed_response == "yes" && retry_count < max_retries {
                         retry_count += 1;
-                        warn!("Received bare 'yes' response from {provider} LLM, retrying ({retry_count}/{max_retries})");
+                        warn!(
+                            "Received bare 'yes' response from {provider} LLM, retrying ({retry_count}/{max_retries})"
+                        );
 
                         // Wait a bit before retrying
-                        tokio::time::sleep(std::time::Duration::from_millis(1000 * retry_count)).await;
+                        tokio::time::sleep(std::time::Duration::from_millis(1000 * retry_count))
+                            .await;
                         continue; // Try again
                     }
 
@@ -799,7 +879,7 @@ impl CVEClassifier {
 
                     let (should_assign_cve, explanation) = Self::parse_llm_response(&response);
                     return Ok((should_assign_cve, explanation, response));
-                },
+                }
                 Err(e) => {
                     let err_str = e.to_string();
 
@@ -828,7 +908,11 @@ impl CVEClassifier {
         }
     }
 
-    pub async fn predict(&mut self, commit_info: &CommitFeatures, verbose: bool) -> Result<PredictionResult, String> {
+    pub async fn predict(
+        &mut self,
+        commit_info: &CommitFeatures,
+        verbose: bool,
+    ) -> Result<PredictionResult, String> {
         // Initialize LLMs if not already done
         self.initialize_llms()?;
 
@@ -883,7 +967,8 @@ impl CVEClassifier {
         };
 
         // Construct prompt with context and commit info
-        let prompt = Self::construct_prompt(&commit_text, &similar_commits, fixes_context.as_deref());
+        let prompt =
+            Self::construct_prompt(&commit_text, &similar_commits, fixes_context.as_deref());
 
         // Show full prompt when verbose is enabled
         if verbose {
@@ -902,7 +987,12 @@ impl CVEClassifier {
         // Return the CVE assignment decision
         Ok(PredictionResult {
             sha: commit_info.sha.clone(),
-            subject: commit_info.message.lines().next().unwrap_or("Unknown").to_string(),
+            subject: commit_info
+                .message
+                .lines()
+                .next()
+                .unwrap_or("Unknown")
+                .to_string(),
             should_select: result.should_select,
             vote_ratio: result.vote_ratio,
             provider_results: result.provider_results,
@@ -995,7 +1085,6 @@ impl CVEClassifier {
             (true, "deserves a cve"),
             (true, "qualifies for a cve"),
             (true, "warrants a cve"),
-
             // Negative phrases
             (false, "should not be assigned a cve"),
             (false, "does not need a cve"),
@@ -1019,7 +1108,11 @@ impl CVEClassifier {
     }
 
     // Shared method to process a prompt with all available LLMs
-    async fn process_with_llms(&mut self, prompt: &str, verbose: bool) -> Result<PredictionResult, String> {
+    async fn process_with_llms(
+        &mut self,
+        prompt: &str,
+        verbose: bool,
+    ) -> Result<PredictionResult, String> {
         // Initialize LLMs if not already done
         self.initialize_llms()?;
 
@@ -1051,27 +1144,36 @@ impl CVEClassifier {
             if let Some(llm) = llms.get(provider) {
                 // Deref Box<dyn Llm> to get a dyn Llm, then take a reference
                 let llm_ref: &dyn Llm = llm.as_ref();
-                match self.invoke_llm_with_retry(llm_ref, prompt, provider, verbose).await {
+                match self
+                    .invoke_llm_with_retry(llm_ref, prompt, provider, verbose)
+                    .await
+                {
                     Ok((should_assign_cve, explanation, response)) => {
                         // Store our CVE assignment decision
-                        results.insert(provider.clone(), ProviderResult {
-                            should_select: should_assign_cve, // Store the CVE assignment decision
-                            explanation,
-                            error: None,
-                            raw_response: Some(response),
-                        });
+                        results.insert(
+                            provider.clone(),
+                            ProviderResult {
+                                should_select: should_assign_cve, // Store the CVE assignment decision
+                                explanation,
+                                error: None,
+                                raw_response: Some(response),
+                            },
+                        );
 
                         should_assign_cve_votes += i32::from(should_assign_cve);
                         provider_count += 1;
-                    },
+                    }
                     Err(e) => {
                         // Store our CVE assignment decision (default: no CVE)
-                        results.insert(provider.clone(), ProviderResult {
-                            should_select: false, // Default to false (no CVE) in error case
-                            explanation: String::new(),
-                            error: Some(e),
-                            raw_response: None,
-                        });
+                        results.insert(
+                            provider.clone(),
+                            ProviderResult {
+                                should_select: false, // Default to false (no CVE) in error case
+                                explanation: String::new(),
+                                error: Some(e),
+                                raw_response: None,
+                            },
+                        );
                     }
                 }
             }
@@ -1084,7 +1186,7 @@ impl CVEClassifier {
         // Return a generic prediction result (will be enhanced by specific methods)
         // Return the CVE assignment decision
         Ok(PredictionResult {
-            sha: String::new(), // Will be overridden by the calling method
+            sha: String::new(),     // Will be overridden by the calling method
             subject: String::new(), // Will be overridden by the calling method
             should_select: consensus_should_assign_cve,
             vote_ratio: format!("{should_assign_cve_votes}/{provider_count}"),
@@ -1093,7 +1195,11 @@ impl CVEClassifier {
     }
 
     // Process a custom prompt directly without using embeddings or similar commit search
-    pub async fn process_custom_prompt(&mut self, prompt: &str, verbose: bool) -> Result<PredictionResult, String> {
+    pub async fn process_custom_prompt(
+        &mut self,
+        prompt: &str,
+        verbose: bool,
+    ) -> Result<PredictionResult, String> {
         // Initialize LLMs if needed
         self.initialize_llms()?;
 
@@ -1176,7 +1282,8 @@ mod tests {
 
     #[test]
     fn test_parse_with_think_blocks() {
-        let response = "<think>\nSome internal reasoning\n</think>\n**YES** This is a security vulnerability.";
+        let response =
+            "<think>\nSome internal reasoning\n</think>\n**YES** This is a security vulnerability.";
         let (decision, _) = CVEClassifier::parse_llm_response(response);
         assert!(decision);
     }

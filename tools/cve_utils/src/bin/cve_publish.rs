@@ -2,13 +2,13 @@
 //
 // Copyright (c) 2025 - Sasha Levin <sashal@kernel.org>
 
+use ::cve_utils::common;
+use ::cve_utils::cve_utils;
+use ::cve_utils::git_utils;
+use ::cve_utils::print_git_error_details;
 use anyhow::{Context, Result};
 use clap::Parser;
 use owo_colors::OwoColorize;
-use ::cve_utils::common;
-use ::cve_utils::git_utils;
-use ::cve_utils::cve_utils;
-use ::cve_utils::print_git_error_details;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
@@ -71,7 +71,10 @@ fn main() -> Result<()> {
     let publish_mode = args.get_publish_mode();
 
     if matches!(publish_mode, PublishMode::None) {
-        println!("{} No action specified. Use --json, --mbox, or --all", "WARNING:".yellow());
+        println!(
+            "{} No action specified. Use --json, --mbox, or --all",
+            "WARNING:".yellow()
+        );
         println!("Run with --help for more information.");
         return Ok(());
     }
@@ -94,7 +97,7 @@ fn main() -> Result<()> {
                 println!("  {} Dry run mode - no actual publishing", "INFO:".blue());
             }
             publish_json_files(args.dry_run)?;
-        },
+        }
         _ => {}
     }
 
@@ -105,7 +108,7 @@ fn main() -> Result<()> {
                 println!("  {} Dry run mode - no actual emails sent", "INFO:".blue());
             }
             publish_mbox_files(args.dry_run)?;
-        },
+        }
         _ => {}
     }
 
@@ -125,7 +128,10 @@ fn publish_json_files(dry_run: bool) -> Result<()> {
         return Ok(());
     }
 
-    println!("  Found {} modified JSON files to publish", modified_files.len().to_string().cyan());
+    println!(
+        "  Found {} modified JSON files to publish",
+        modified_files.len().to_string().cyan()
+    );
 
     // Process each file
     for file_path in &modified_files {
@@ -144,17 +150,31 @@ fn publish_json_files(dry_run: bool) -> Result<()> {
         if !dry_run {
             // Call the CVE tool to publish the JSON file
             let output = Command::new("cve")
-                .args(["-o", "Linux", "publish", &cve_id, "-f", &file_path.to_string_lossy()])
+                .args([
+                    "-o",
+                    "Linux",
+                    "publish",
+                    &cve_id,
+                    "-f",
+                    &file_path.to_string_lossy(),
+                ])
                 .output()
                 .context("Failed to execute 'cve' command")?;
 
             if output.status.success() {
-                println!("    {} CVE published successfully at: https://cve.org/CVERecord/?id={}",
-                         "SUCCESS:".green(), cve_id);
+                println!(
+                    "    {} CVE published successfully at: https://cve.org/CVERecord/?id={}",
+                    "SUCCESS:".green(),
+                    cve_id
+                );
             } else {
                 let error = String::from_utf8_lossy(&output.stderr);
-                println!("    {} Failed to publish {}: {}",
-                         "ERROR:".red(), cve_id.cyan(), error);
+                println!(
+                    "    {} Failed to publish {}: {}",
+                    "ERROR:".red(),
+                    cve_id.cyan(),
+                    error
+                );
             }
         }
     }
@@ -176,7 +196,8 @@ fn publish_mbox_files(dry_run: bool) -> Result<()> {
     }
 
     // Filter out rejected mbox files (those ending with .mbox.rejected)
-    let mbox_files: Vec<PathBuf> = modified_files.into_iter()
+    let mbox_files: Vec<PathBuf> = modified_files
+        .into_iter()
         .filter(|f| {
             let file_name = f.file_name().unwrap().to_string_lossy();
             !file_name.ends_with(".rejected")
@@ -188,7 +209,10 @@ fn publish_mbox_files(dry_run: bool) -> Result<()> {
         return Ok(());
     }
 
-    println!("  Found {} mbox files to send", mbox_files.len().to_string().cyan());
+    println!(
+        "  Found {} mbox files to send",
+        mbox_files.len().to_string().cyan()
+    );
 
     // Print list of files that will be sent
     for file_path in &mbox_files {
@@ -202,25 +226,35 @@ fn publish_mbox_files(dry_run: bool) -> Result<()> {
             .trim()
             .to_string();
 
-        println!("  Sending email for {} for commit {}", cve_id.cyan(), sha.green());
+        println!(
+            "  Sending email for {} for commit {}",
+            cve_id.cyan(),
+            sha.green()
+        );
     }
 
     // Send emails if not in dry run mode
     if !mbox_files.is_empty() && !dry_run {
         // Build file list for git send-email
-        let file_list: Vec<String> = mbox_files.iter()
+        let file_list: Vec<String> = mbox_files
+            .iter()
             .map(|p| p.to_string_lossy().into_owned())
             .collect();
 
         // Execute git send-email
         let mut cmd = Command::new("git");
-        cmd.args(["send-email", "--no-thread", "--to=linux-cve-announce@vger.kernel.org"]);
+        cmd.args([
+            "send-email",
+            "--no-thread",
+            "--to=linux-cve-announce@vger.kernel.org",
+        ]);
 
         for file in &file_list {
             cmd.arg(file);
         }
 
-        let output = cmd.output()
+        let output = cmd
+            .output()
             .context("Failed to execute git send-email command")?;
 
         if output.status.success() {
@@ -264,17 +298,26 @@ mod tests {
         // Test with a JSON file
         let json_path = temp_path.join(format!("{cve_id}.json"));
         fs::write(&json_path, "test content").unwrap();
-        assert_eq!(cve_utils::extract_cve_id_from_path(&json_path).unwrap(), cve_id);
+        assert_eq!(
+            cve_utils::extract_cve_id_from_path(&json_path).unwrap(),
+            cve_id
+        );
 
         // Test with a mbox file
         let mbox_path = temp_path.join(format!("{cve_id}.mbox"));
         fs::write(&mbox_path, "test content").unwrap();
-        assert_eq!(cve_utils::extract_cve_id_from_path(&mbox_path).unwrap(), cve_id);
+        assert_eq!(
+            cve_utils::extract_cve_id_from_path(&mbox_path).unwrap(),
+            cve_id
+        );
 
         // Test with a rejected mbox file
         let rejected_path = temp_path.join(format!("{cve_id}.mbox.rejected"));
         fs::write(&rejected_path, "test content").unwrap();
-        assert_eq!(cve_utils::extract_cve_id_from_path(&rejected_path).unwrap(), cve_id);
+        assert_eq!(
+            cve_utils::extract_cve_id_from_path(&rejected_path).unwrap(),
+            cve_id
+        );
     }
 
     #[test]
@@ -291,5 +334,4 @@ mod tests {
         // Note: We can't really test get_modified_files here as it requires a git repository
         // This is a placeholder test
     }
-
 }

@@ -4,9 +4,12 @@
 //
 // Copyright (c) 2026 - Sasha Levin <sashal@kernel.org>
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 
-use super::metrics::{CvssMetrics, AttackVector, AttackComplexity, PrivilegesRequired, UserInteraction, Scope, CiaImpact};
+use super::metrics::{
+    AttackComplexity, AttackVector, CiaImpact, CvssMetrics, PrivilegesRequired, Scope,
+    UserInteraction,
+};
 
 const VECTOR_PREFIX: &str = "CVSS:3.1/";
 const METRIC_COUNT: usize = 8;
@@ -216,22 +219,17 @@ mod tests {
 
     #[test]
     fn parse_extra_metrics() {
-        assert!(
-            parse_vector("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H/X:Y").is_err()
-        );
+        assert!(parse_vector("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H/X:Y").is_err());
     }
 
     #[test]
     fn parse_duplicate_metric() {
-        assert!(
-            parse_vector("CVSS:3.1/AV:N/AV:L/PR:N/UI:N/S:U/C:H/I:H/A:H").is_err()
-        );
+        assert!(parse_vector("CVSS:3.1/AV:N/AV:L/PR:N/UI:N/S:U/C:H/I:H/A:H").is_err());
     }
 
     #[test]
     fn parse_whitespace_trimmed() {
-        let m =
-            parse_vector("  CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H  ").unwrap();
+        let m = parse_vector("  CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H  ").unwrap();
         assert_eq!(m.av, AttackVector::Network);
     }
 }

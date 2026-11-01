@@ -29,7 +29,10 @@ fn no_args_shows_error() {
 #[test]
 fn vector_only_computes_score() {
     cvss_cmd()
-        .args(["--vector-only", "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"])
+        .args([
+            "--vector-only",
+            "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+        ])
         .assert()
         .success()
         .stdout(predicate::str::contains("9.8"))
@@ -39,7 +42,10 @@ fn vector_only_computes_score() {
 #[test]
 fn vector_only_medium() {
     cvss_cmd()
-        .args(["--vector-only", "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H"])
+        .args([
+            "--vector-only",
+            "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
+        ])
         .assert()
         .success()
         .stdout(predicate::str::contains("5.5"))
@@ -49,7 +55,10 @@ fn vector_only_medium() {
 #[test]
 fn vector_only_zero_impact() {
     cvss_cmd()
-        .args(["--vector-only", "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N"])
+        .args([
+            "--vector-only",
+            "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N",
+        ])
         .assert()
         .success()
         .stdout(predicate::str::contains("0.0"))
@@ -59,7 +68,11 @@ fn vector_only_zero_impact() {
 #[test]
 fn vector_only_json_output() {
     cvss_cmd()
-        .args(["--vector-only", "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H", "--json"])
+        .args([
+            "--vector-only",
+            "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "--json",
+        ])
         .assert()
         .success()
         .stdout(predicate::str::contains("\"score\""))
@@ -71,7 +84,11 @@ fn vector_only_json_output() {
 #[test]
 fn vector_only_verbose() {
     cvss_cmd()
-        .args(["--vector-only", "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H", "-v"])
+        .args([
+            "--vector-only",
+            "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "-v",
+        ])
         .assert()
         .success()
         .stdout(predicate::str::contains("Attack Vector"))
@@ -90,7 +107,10 @@ fn invalid_vector_error() {
 #[test]
 fn invalid_vector_wrong_version() {
     cvss_cmd()
-        .args(["--vector-only", "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"])
+        .args([
+            "--vector-only",
+            "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+        ])
         .assert()
         .failure();
 }

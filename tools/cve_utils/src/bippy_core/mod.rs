@@ -8,7 +8,7 @@
 //              tools which process many CVEs (e.g. cve_update) do not have to
 //              fork one bippy process per CVE.
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use log::{debug, error, warn};
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
@@ -23,8 +23,8 @@ pub mod policy;
 pub mod text;
 pub mod version;
 
-pub use json::{generate_json, CveRecordParams};
-pub use mbox::{generate_mbox, MboxParams};
+pub use json::{CveRecordParams, generate_json};
+pub use mbox::{MboxParams, generate_mbox};
 pub use text::strip_commit_text;
 
 use crate::cvss::rationale::Rationale;
@@ -170,14 +170,19 @@ pub fn process_commit_text(
             let trimmed_content = message_content.trim();
             // Check if message file has actual content after trimming
             if trimmed_content.is_empty() {
-                error!("Warning: Message file {} is empty or contains only whitespace, falling back to commit message", message_path.display());
+                error!(
+                    "Warning: Message file {} is empty or contains only whitespace, falling back to commit message",
+                    message_path.display()
+                );
             } else {
                 debug!(
                     "Using content from .message file: {}",
                     message_path.display()
                 );
                 // When using a .message file, use its content as the complete description
-                return format!("In the Linux kernel, the following vulnerability has been resolved:\n\n{trimmed_content}");
+                return format!(
+                    "In the Linux kernel, the following vulnerability has been resolved:\n\n{trimmed_content}"
+                );
             }
         } else {
             error!(
@@ -344,7 +349,8 @@ pub fn generate(req: &GenerateRequest) -> Result<GeneratedRecord> {
         get_commit_info(kernel_tree, req.fixing_shas)?;
 
     // Process commit text
-    let commit_text = process_commit_text(cached_tags(script_dir), &raw_commit_text, req.message_file);
+    let commit_text =
+        process_commit_text(cached_tags(script_dir), &raw_commit_text, req.message_file);
 
     // Run dyad and parse its output
     let dyad_entries = run_dyad_and_parse(req.fixing_shas, req.vulnerable_shas);

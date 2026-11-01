@@ -4,7 +4,7 @@
 //
 // Copyright (c) 2026 - Sasha Levin <sashal@kernel.org>
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -365,7 +365,10 @@ mod tests {
             AttackVector::Local,
             AttackVector::Physical,
         ] {
-            assert_eq!(AttackVector::from_abbreviation(av.abbreviation()).unwrap(), av);
+            assert_eq!(
+                AttackVector::from_abbreviation(av.abbreviation()).unwrap(),
+                av
+            );
         }
 
         for ac in [AttackComplexity::Low, AttackComplexity::High] {

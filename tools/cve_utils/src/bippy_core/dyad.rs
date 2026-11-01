@@ -2,8 +2,8 @@
 //
 // Copyright (c) 2025 - Sasha Levin <sashal@kernel.org>
 
-use anyhow::Result;
 use crate::dyad_core;
+use anyhow::Result;
 
 /// Run the dyad engine to get version range information.
 ///

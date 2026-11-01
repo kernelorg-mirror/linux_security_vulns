@@ -2,7 +2,7 @@
 //
 // Copyright (c) 2025 - Sasha Levin <sashal@kernel.org>
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use clap::Parser;
 use cve_utils::common;
 use cve_utils::print_git_error_details;
@@ -74,7 +74,9 @@ impl CVEDatabase {
         let mut final_set = HashSet::new();
         final_set.extend(sha1_set_mutex.lock().unwrap().iter().cloned());
 
-        Ok(Self { sha1_set: final_set })
+        Ok(Self {
+            sha1_set: final_set,
+        })
     }
 
     /// Check if a commit has a CVE
@@ -137,14 +139,17 @@ fn collect_reviewers_and_files(review_dir: &Path) -> HashMap<String, Vec<PathBuf
             }
 
             // Check if filename matches v*-*
-            if let Some(captures) = regex::Regex::new(r"v[\d.]+-([^/]+)$").ok()
+            if let Some(captures) = regex::Regex::new(r"v[\d.]+-([^/]+)$")
+                .ok()
                 .and_then(|re| re.captures(&file_name))
-                && let Some(reviewer) = captures.get(1) {
-                    let reviewer_name = reviewer.as_str().to_string();
-                    reviewer_files.entry(reviewer_name)
-                        .or_default()
-                        .push(path.to_path_buf());
-                }
+                && let Some(reviewer) = captures.get(1)
+            {
+                let reviewer_name = reviewer.as_str().to_string();
+                reviewer_files
+                    .entry(reviewer_name)
+                    .or_default()
+                    .push(path.to_path_buf());
+            }
         });
 
     reviewer_files
@@ -168,16 +173,19 @@ fn process_reviewers(
     cve_database: &Arc<CVEDatabase>,
 ) -> Vec<(String, ReviewerData)> {
     // Collect all reviews into shared data structure
-    let all_reviews: Arc<Mutex<ReviewMap>> =
-        Arc::new(Mutex::new(HashMap::new()));
+    let all_reviews: Arc<Mutex<ReviewMap>> = Arc::new(Mutex::new(HashMap::new()));
 
     // Calculate total number of files to process for progress bar
     let total_files: usize = reviewer_files.values().map(Vec::len).sum();
     let progress = Arc::new(Mutex::new(ProgressBar::new(total_files as u64)));
-    progress.lock().unwrap().set_style(ProgressStyle::default_bar()
-        .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})")
-        .unwrap()
-        .progress_chars("#>-"));
+    progress.lock().unwrap().set_style(
+        ProgressStyle::default_bar()
+            .template(
+                "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})",
+            )
+            .unwrap()
+            .progress_chars("#>-"),
+    );
 
     // Process all reviewer files in parallel
     let reviewers_data: Vec<(String, ReviewerData)> = reviewer_files
@@ -231,7 +239,10 @@ fn process_reviewers(
         })
         .collect();
 
-    progress.lock().unwrap().finish_with_message("Collection and processing complete");
+    progress
+        .lock()
+        .unwrap()
+        .finish_with_message("Collection and processing complete");
 
     // Calculate consensus metrics
     println!("Calculating consensus metrics...");
@@ -295,23 +306,26 @@ fn main() -> Result<()> {
     let cve_root = vulns_dir.join("cve");
 
     // Set up the directory paths
-    let review_dir = args.review_dir.map_or_else(
-        || cve_root.join("review").join("done"),
-        PathBuf::from,
-    );
+    let review_dir = args
+        .review_dir
+        .map_or_else(|| cve_root.join("review").join("done"), PathBuf::from);
 
-    let published_dir = args.published_dir.map_or_else(
-        || cve_root.join("published"),
-        PathBuf::from,
-    );
+    let published_dir = args
+        .published_dir
+        .map_or_else(|| cve_root.join("published"), PathBuf::from);
 
     // Validate directories exist
     if !review_dir.exists() {
-        return Err(anyhow!("Review directory does not exist: {}", review_dir.display()));
+        return Err(anyhow!(
+            "Review directory does not exist: {}",
+            review_dir.display()
+        ));
     }
     if !published_dir.exists() {
         return Err(anyhow!(
-            "Published directory does not exist: {}", published_dir.display()));
+            "Published directory does not exist: {}",
+            published_dir.display()
+        ));
     }
 
     println!("Reviewer Accuracy Report");
@@ -367,7 +381,8 @@ fn main() -> Result<()> {
         }
 
         #[allow(clippy::cast_precision_loss)]
-        let hit_percentage = (data.correct_predictions as f64 / data.total_predictions as f64) * 100.0;
+        let hit_percentage =
+            (data.correct_predictions as f64 / data.total_predictions as f64) * 100.0;
 
         let missed_percentage = if data.total_possible_consensus > 0 {
             #[allow(clippy::cast_precision_loss)]
@@ -408,8 +423,16 @@ mod tests {
         fs::create_dir_all(&year_dir).unwrap();
 
         // Create a few test SHA1 files
-        fs::write(year_dir.join("CVE-2023-0001.sha1"), "abcd1234abcd1234abcd1234abcd1234abcd1234").unwrap();
-        fs::write(year_dir.join("CVE-2023-0002.sha1"), "5678defg5678defg5678defg5678defg5678defg").unwrap();
+        fs::write(
+            year_dir.join("CVE-2023-0001.sha1"),
+            "abcd1234abcd1234abcd1234abcd1234abcd1234",
+        )
+        .unwrap();
+        fs::write(
+            year_dir.join("CVE-2023-0002.sha1"),
+            "5678defg5678defg5678defg5678defg5678defg",
+        )
+        .unwrap();
 
         let db = CVEDatabase::new(temp_dir.path()).unwrap();
 

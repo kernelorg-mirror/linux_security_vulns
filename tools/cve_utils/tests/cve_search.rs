@@ -36,7 +36,9 @@ fn known_cve_id_returns_sha() {
         .assert()
         .success()
         .stdout(predicate::str::contains("CVE-2024-26581"))
-        .stdout(predicate::str::contains("60c0c230c6f046da536d3df8b39a20b9a9fd6af0"));
+        .stdout(predicate::str::contains(
+            "60c0c230c6f046da536d3df8b39a20b9a9fd6af0",
+        ));
 }
 
 #[test]

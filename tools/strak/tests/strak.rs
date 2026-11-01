@@ -13,9 +13,9 @@ use std::process::Command;
 fn no_args_shows_error() {
     let mut cmd = Command::new(cargo::cargo_bin!("strak"));
 
-    cmd.assert()
-        .failure()
-        .stderr(predicate::str::contains("You must provide either a Git SHA or --fixed option"));
+    cmd.assert().failure().stderr(predicate::str::contains(
+        "You must provide either a Git SHA or --fixed option",
+    ));
 }
 
 #[test]

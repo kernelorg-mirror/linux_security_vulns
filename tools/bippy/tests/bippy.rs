@@ -43,12 +43,21 @@ fn missing_sha_shows_error() {
 fn invalid_sha_shows_error() {
     let mut cmd = Command::new(cargo::cargo_bin!("bippy"));
 
-    cmd.args(["--cve", "CVE-2024-12345", "--sha", "invalidsha",
-              "--json", "/tmp/bippy_test_out.json",
-              "--user", "test@test.com", "--name", "Test"])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("SHAs could be resolved"));
+    cmd.args([
+        "--cve",
+        "CVE-2024-12345",
+        "--sha",
+        "invalidsha",
+        "--json",
+        "/tmp/bippy_test_out.json",
+        "--user",
+        "test@test.com",
+        "--name",
+        "Test",
+    ])
+    .assert()
+    .failure()
+    .stderr(predicate::str::contains("SHAs could be resolved"));
 }
 
 #[test]
@@ -58,5 +67,7 @@ fn missing_output_format_shows_error() {
     cmd.args(["--cve", "CVE-2024-12345", "--sha", "abc123"])
         .assert()
         .failure()
-        .stderr(predicate::str::contains("one of json or mbox must be specified"));
+        .stderr(predicate::str::contains(
+            "one of json or mbox must be specified",
+        ));
 }

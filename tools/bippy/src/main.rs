@@ -244,7 +244,10 @@ mod tests {
         // Test with empty tags
         let empty_tags: Vec<String> = Vec::new();
         let result = strip_commit_text(commit_text, &empty_tags);
-        assert_eq!(result, "In the Linux kernel, the following vulnerability has been resolved:\n\nSubject: Fix a bug\n\nThis commit fixes a bug in the kernel.\n\nSigned-off-by: Bob <bob@example.com>\nAcked-by: Alice <alice@example.com>\n");
+        assert_eq!(
+            result,
+            "In the Linux kernel, the following vulnerability has been resolved:\n\nSubject: Fix a bug\n\nThis commit fixes a bug in the kernel.\n\nSigned-off-by: Bob <bob@example.com>\nAcked-by: Alice <alice@example.com>\n"
+        );
 
         // Test with multi-paragraph commit
         let multi_para_commit = "Subject: Complex fix\n\nParagraph 1 with details.\n\nParagraph 2 with more details.\n\nSigned-off-by: Bob <bob@example.com>\n";
@@ -275,7 +278,10 @@ mod tests {
         // Test process_commit_text with message file
         let commit_text = "Original commit message that should be ignored";
         let processed = process_commit_text(&[], commit_text, Some(&message_file_path));
-        assert!(processed.starts_with("In the Linux kernel, the following vulnerability has been resolved:"));
+        assert!(
+            processed
+                .starts_with("In the Linux kernel, the following vulnerability has been resolved:")
+        );
         assert!(processed.contains("This is a custom CVE description"));
         assert!(!processed.contains("Original commit message"));
 
@@ -283,14 +289,20 @@ mod tests {
         fs::write(script_dir.join("tags"), "Signed-off-by\n").unwrap();
         let tags = read_tags_file(script_dir).unwrap();
         let processed_no_message = process_commit_text(&tags, commit_text, None);
-        assert!(processed_no_message.starts_with("In the Linux kernel, the following vulnerability has been resolved:"));
+        assert!(
+            processed_no_message
+                .starts_with("In the Linux kernel, the following vulnerability has been resolved:")
+        );
         assert!(processed_no_message.contains("Original commit message"));
 
         // Test empty message file - should fall back to commit message
         let empty_message_path = script_dir.join("empty.message");
         fs::write(&empty_message_path, "   \n\n   \n").unwrap();
         let processed_empty = process_commit_text(&tags, commit_text, Some(&empty_message_path));
-        assert!(processed_empty.starts_with("In the Linux kernel, the following vulnerability has been resolved:"));
+        assert!(
+            processed_empty
+                .starts_with("In the Linux kernel, the following vulnerability has been resolved:")
+        );
         assert!(processed_empty.contains("Original commit message"));
     }
 

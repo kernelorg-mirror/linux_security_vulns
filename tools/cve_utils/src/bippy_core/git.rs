@@ -34,4 +34,3 @@ pub fn get_commit_text(_repo: &Repository, obj: &Object) -> Result<String> {
 
     Ok(message)
 }
-

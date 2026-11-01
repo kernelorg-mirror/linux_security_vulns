@@ -2,9 +2,10 @@
 //
 // Copyright (c) 2025 - Sasha Levin <sashal@kernel.org>
 
-use anyhow::{anyhow, Context, Result};
-use chrono::{Datelike, DateTime, NaiveDate, Utc};
+use anyhow::{Context, Result, anyhow};
+use chrono::{DateTime, Datelike, NaiveDate, Utc};
 use clap::Parser;
+use cve_utils::cve_utils::extract_cve_id_from_path;
 use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::env;
@@ -12,7 +13,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::str;
 use walkdir::WalkDir;
-use cve_utils::cve_utils::extract_cve_id_from_path;
 
 #[derive(Parser)]
 #[command(author, version, about = "CVE statistics utility")]
@@ -41,13 +41,16 @@ struct Args {
 /// Parse the subsystem argument which can be either M or M,S
 fn parse_subsystem_args(arg: &str) -> Result<(usize, usize), String> {
     if let Some((m, s)) = arg.split_once(',') {
-        let m_value = m.parse::<usize>()
+        let m_value = m
+            .parse::<usize>()
             .map_err(|_| format!("Invalid value for subsystems: {m}"))?;
-        let s_value = s.parse::<usize>()
+        let s_value = s
+            .parse::<usize>()
             .map_err(|_| format!("Invalid value for sub-subsystems: {s}"))?;
         Ok((m_value, s_value))
     } else {
-        let m_value = arg.parse::<usize>()
+        let m_value = arg
+            .parse::<usize>()
             .map_err(|_| format!("Invalid value for subsystems: {arg}"))?;
         Ok((m_value, 3)) // Default to 3 sub-subsystems
     }
@@ -83,7 +86,9 @@ fn find_cve_root() -> Result<PathBuf> {
     }
 
     // If we get here, we couldn't find the CVE root
-    Err(anyhow!("Could not find CVE root directory. Please run this tool from within the vulnerability database repository."))
+    Err(anyhow!(
+        "Could not find CVE root directory. Please run this tool from within the vulnerability database repository."
+    ))
 }
 
 /// Main entry point for the CVE statistics utility
@@ -97,13 +102,23 @@ fn main() {
     let cli = Args::parse();
 
     // If no args specified, show usage
-    if !cli.summary && cli.authors.is_none() && cli.subsystem.is_none() &&
-       cli.versions.is_none() && !cli.ttf {
-        println!("Usage: cve_stats [--summary] [--authors[=N]] [--subsystem[=M[,S]]] [--versions[=N]] [--ttf]");
+    if !cli.summary
+        && cli.authors.is_none()
+        && cli.subsystem.is_none()
+        && cli.versions.is_none()
+        && !cli.ttf
+    {
+        println!(
+            "Usage: cve_stats [--summary] [--authors[=N]] [--subsystem[=M[,S]]] [--versions[=N]] [--ttf]"
+        );
         println!("  --summary              Show general CVE statistics");
         println!("  --authors[=N]          Show top N CVE commit authors (default: 10)");
-        println!("  --subsystem[=M[,S]]    Show top M subsystems with S sub-subsystems each (default: M=10,S=3)");
-        println!("  --versions[=N]         Show top N kernel versions with CVE fixes (default: 10)");
+        println!(
+            "  --subsystem[=M[,S]]    Show top M subsystems with S sub-subsystems each (default: M=10,S=3)"
+        );
+        println!(
+            "  --versions[=N]         Show top N kernel versions with CVE fixes (default: 10)"
+        );
         println!("  --ttf                  Show Time to Fix analysis");
         std::process::exit(1);
     }
@@ -132,9 +147,12 @@ fn main() {
         .output();
 
     match output {
-        Ok(output) if output.status.success() => {},
+        Ok(output) if output.status.success() => {}
         _ => {
-            eprintln!("Error: {} is not a valid git repository", kernel_tree.display());
+            eprintln!(
+                "Error: {} is not a valid git repository",
+                kernel_tree.display()
+            );
             std::process::exit(1);
         }
     }
@@ -151,13 +169,16 @@ fn main() {
 
     // Verify the cve/published directory exists
     if !cve_root.join("cve").join("published").exists() {
-        eprintln!("Error: Found potential CVE root at {}, but it does not contain a cve/published directory", cve_root.display());
+        eprintln!(
+            "Error: Found potential CVE root at {}, but it does not contain a cve/published directory",
+            cve_root.display()
+        );
         std::process::exit(1);
     }
 
     // Run the actual program with comprehensive error handling
     match run(&cli, &cve_root, &kernel_tree) {
-        Ok(()) => {},
+        Ok(()) => {}
         Err(e) => {
             eprintln!("Error: {e}");
 
@@ -171,20 +192,19 @@ fn main() {
 
 fn run(args: &Args, cve_root: &Path, kernel_tree: &Path) -> Result<()> {
     // Only skip get_first_cve_date when only showing authors
-    let start_date = if !args.summary && args.versions.is_none() && args.subsystem.is_none() && !args.ttf {
-        // Skip get_first_cve_date entirely when only showing authors
-        None
-    } else {
-        // Get date for other operations
-        match get_first_cve_date(cve_root) {
-            Ok(date) => {
-                Some(date)
+    let start_date =
+        if !args.summary && args.versions.is_none() && args.subsystem.is_none() && !args.ttf {
+            // Skip get_first_cve_date entirely when only showing authors
+            None
+        } else {
+            // Get date for other operations
+            match get_first_cve_date(cve_root) {
+                Ok(date) => Some(date),
+                Err(e) => {
+                    return Err(e);
+                }
             }
-            Err(e) => {
-                return Err(e);
-            }
-        }
-    };
+        };
 
     // Show summary stats if requested
     if args.summary {
@@ -207,7 +227,7 @@ fn run(args: &Args, cve_root: &Path, kernel_tree: &Path) -> Result<()> {
             kernel_tree,
             num_subsystems,
             num_sub_subsystems,
-            args.authors.is_some()
+            args.authors.is_some(),
         );
     }
 
@@ -227,7 +247,14 @@ fn run(args: &Args, cve_root: &Path, kernel_tree: &Path) -> Result<()> {
 fn get_first_cve_date(vulns_dir: &Path) -> Result<String> {
     // Use git log to find the first CVE date (matching bash script behavior)
     let output = std::process::Command::new("git")
-        .args(["log", "--diff-filter=A", "--reverse", "--pretty=format:%ad", "--date=short", "cve/published/"])
+        .args([
+            "log",
+            "--diff-filter=A",
+            "--reverse",
+            "--pretty=format:%ad",
+            "--date=short",
+            "cve/published/",
+        ])
         .current_dir(vulns_dir)
         .output()
         .context("Failed to run git log to find first CVE date")?;
@@ -291,18 +318,27 @@ fn count_cves_in_range(vulns_dir: &Path, start_date: &str, end_date: &str) -> Re
         .collect();
 
     // Process commits in parallel to find CVEs
-    let cve_sets: Vec<HashSet<String>> = commits.par_iter()
+    let cve_sets: Vec<HashSet<String>> = commits
+        .par_iter()
         .map(|commit_sha| {
             let mut commit_cves = HashSet::new();
 
             // Get only ADDED files (not modified) for this commit in the vulns repo
             // Using --diff-filter=A to only count newly created CVEs, not updates
             let output = std::process::Command::new("git")
-                .args(["show", "--pretty=format:", "--name-only", "--diff-filter=A", commit_sha])
+                .args([
+                    "show",
+                    "--pretty=format:",
+                    "--name-only",
+                    "--diff-filter=A",
+                    commit_sha,
+                ])
                 .current_dir(git_dir)
                 .output();
 
-            if let Ok(output) = output && output.status.success() {
+            if let Ok(output) = output
+                && output.status.success()
+            {
                 let files = String::from_utf8_lossy(&output.stdout);
                 for file_path in files.lines() {
                     // Only count .json files (matching bash script behavior)
@@ -342,7 +378,8 @@ fn show_summary_stats(cve_root: &Path, first_cve_date: &str) -> Result<()> {
     let current_year = Utc::now().year();
     let years: Vec<i32> = (2019..=current_year).collect();
 
-    let year_counts: Vec<(i32, Result<usize>)> = years.par_iter()
+    let year_counts: Vec<(i32, Result<usize>)> = years
+        .par_iter()
         .map(|&year| {
             let start_date = format!("{year}-01-01");
             let next_year = year + 1;
@@ -371,7 +408,8 @@ fn show_summary_stats(cve_root: &Path, first_cve_date: &str) -> Result<()> {
     let current_month = now.month() as i32;
 
     // Build month ranges
-    let month_ranges: Vec<(i32, i32, i32)> = (0..=5).rev()
+    let month_ranges: Vec<(i32, i32, i32)> = (0..=5)
+        .rev()
         .map(|i| {
             let mut month = current_month - i;
             let mut year = current_year;
@@ -385,7 +423,8 @@ fn show_summary_stats(cve_root: &Path, first_cve_date: &str) -> Result<()> {
         .collect();
 
     // Calculate statistics for last 6 months in parallel
-    let month_counts: Vec<(String, String, Result<usize>)> = month_ranges.par_iter()
+    let month_counts: Vec<(String, String, Result<usize>)> = month_ranges
+        .par_iter()
         .map(|&(_i, year, month)| {
             let mut next_month = month + 1;
             let mut next_year = year;
@@ -403,10 +442,9 @@ fn show_summary_stats(cve_root: &Path, first_cve_date: &str) -> Result<()> {
             let count = count_cves_in_range(cve_root, &start_date, &end_date);
 
             // Use chrono to format the month name
-            let date = NaiveDate::parse_from_str(&start_date, "%Y-%m-%d")
-                .unwrap_or_else(|_| {
-                    NaiveDate::from_ymd_opt(year, u32::try_from(month).unwrap_or(1), 1).unwrap()
-                });
+            let date = NaiveDate::parse_from_str(&start_date, "%Y-%m-%d").unwrap_or_else(|_| {
+                NaiveDate::from_ymd_opt(year, u32::try_from(month).unwrap_or(1), 1).unwrap()
+            });
             let formatted_date = date.format("%B %Y").to_string();
 
             (start_date, formatted_date, count)
@@ -434,7 +472,11 @@ fn show_summary_stats(cve_root: &Path, first_cve_date: &str) -> Result<()> {
     let total_days = (now - first_date).num_days() as f64;
 
     #[allow(clippy::cast_precision_loss)]
-    let total_cves = count_cves_in_range(cve_root, first_cve_date, &now.format("%Y-%m-%d").to_string())? as f64;
+    let total_cves = count_cves_in_range(
+        cve_root,
+        first_cve_date,
+        &now.format("%Y-%m-%d").to_string(),
+    )? as f64;
 
     // Calculate averages
     let avg_per_month = total_cves / (total_days / 30.44);
@@ -459,7 +501,9 @@ fn show_author_stats(cve_root: &Path, kernel_tree: &Path, num_authors: usize) {
     for entry in WalkDir::new(&published_dir)
         .into_iter()
         .filter_map(Result::ok)
-        .filter(|e| e.file_type().is_file() && e.path().extension().is_some_and(|ext| ext == "sha1"))
+        .filter(|e| {
+            e.file_type().is_file() && e.path().extension().is_some_and(|ext| ext == "sha1")
+        })
     {
         sha1_files.push(entry.path().to_path_buf());
     }
@@ -467,7 +511,8 @@ fn show_author_stats(cve_root: &Path, kernel_tree: &Path, num_authors: usize) {
     println!("Found {} SHA1 files", sha1_files.len());
 
     // Process SHA1 files in parallel to get authors
-    let author_results: Vec<Option<String>> = sha1_files.par_iter()
+    let author_results: Vec<Option<String>> = sha1_files
+        .par_iter()
         .map(|sha1_file| {
             // Read the SHA1 from the file
             let sha1_content = fs::read_to_string(sha1_file).ok()?;
@@ -525,7 +570,11 @@ fn get_commit_subsystem(kernel_tree: &Path, sha1_file: &Path) -> Result<Option<(
     let sha1 = match fs::read_to_string(sha1_file) {
         Ok(content) => content.trim().to_string(),
         Err(e) => {
-            return Err(anyhow!("Failed to read SHA1 from file: {} - {}", sha1_file.display(), e));
+            return Err(anyhow!(
+                "Failed to read SHA1 from file: {} - {}",
+                sha1_file.display(),
+                e
+            ));
         }
     };
 
@@ -579,23 +628,25 @@ fn get_commit_subsystem(kernel_tree: &Path, sha1_file: &Path) -> Result<Option<(
 
 /// Type alias for the complex return type of `collect_subsystem_data`
 type SubsystemData = (
-    Vec<PathBuf>,                  // SHA1 files
-    HashMap<String, Vec<String>>,  // Main subsystems
-    HashMap<String, Vec<String>>,  // Sub subsystems
-    bool                           // Whether author stats are enabled
+    Vec<PathBuf>,                 // SHA1 files
+    HashMap<String, Vec<String>>, // Main subsystems
+    HashMap<String, Vec<String>>, // Sub subsystems
+    bool,                         // Whether author stats are enabled
 );
 
 /// Collect subsystem data from SHA1 files
 fn collect_subsystem_data(
     published_dir: &Path,
     kernel_tree: &Path,
-    show_authors: bool
+    show_authors: bool,
 ) -> SubsystemData {
     // Find all .sha1 files recursively in published directory
     let sha1_files: Vec<_> = WalkDir::new(published_dir)
         .into_iter()
         .filter_map(Result::ok)
-        .filter(|e| e.file_type().is_file() && e.path().extension().is_some_and(|ext| ext == "sha1"))
+        .filter(|e| {
+            e.file_type().is_file() && e.path().extension().is_some_and(|ext| ext == "sha1")
+        })
         .map(|e| e.path().to_path_buf())
         .collect();
 
@@ -605,9 +656,9 @@ fn collect_subsystem_data(
     let mut main_subsystems: HashMap<String, Vec<String>> = HashMap::new();
     let mut sub_subsystems: HashMap<String, Vec<String>> = HashMap::new();
 
-
     // Process files in parallel using rayon
-    let results: Vec<(PathBuf, Option<(String, String)>)> = sha1_files.par_iter()
+    let results: Vec<(PathBuf, Option<(String, String)>)> = sha1_files
+        .par_iter()
         .map(|sha1_file| {
             let subsystem = get_commit_subsystem(kernel_tree, sha1_file).unwrap_or_default();
             (sha1_file.clone(), subsystem)
@@ -620,16 +671,15 @@ fn collect_subsystem_data(
             let cve_id = sha1_file.file_stem().unwrap().to_string_lossy().to_string();
 
             // Add to main subsystem
-            main_subsystems.entry(main_subsystem.clone())
+            main_subsystems
+                .entry(main_subsystem.clone())
                 .or_default()
                 .push(cve_id.clone());
 
             // Add to sub-subsystem if different from main
             if main_subsystem != sub_subsystem {
                 let sub_key = sub_subsystem.replace('/', "_"); // Use underscore for filenames
-                sub_subsystems.entry(sub_key)
-                    .or_default()
-                    .push(cve_id);
+                sub_subsystems.entry(sub_key).or_default().push(cve_id);
             }
         }
     }
@@ -647,7 +697,8 @@ fn get_author_stats(
     let mut author_counts: HashMap<String, usize> = HashMap::new();
 
     // Get authors for each CVE in parallel
-    let author_results: Vec<Option<String>> = cve_list.par_iter()
+    let author_results: Vec<Option<String>> = cve_list
+        .par_iter()
         .map(|cve_id| {
             // Find the sha1 file for this CVE
             for sha1_file in sha1_files {
@@ -665,8 +716,11 @@ fn get_author_stats(
                                 .current_dir(kernel_tree)
                                 .output();
 
-                            if let Ok(output) = output && output.status.success() {
-                                let author_name = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                            if let Ok(output) = output
+                                && output.status.success()
+                            {
+                                let author_name =
+                                    String::from_utf8_lossy(&output.stdout).trim().to_string();
                                 if !author_name.is_empty() {
                                     return Some(author_name);
                                 }
@@ -698,9 +752,11 @@ fn show_subsystem_stats(
     kernel_tree: &Path,
     num_subsystems: usize,
     num_sub_subsystems: usize,
-    show_authors: bool
+    show_authors: bool,
 ) {
-    println!("\n=== Top {num_subsystems} Subsystems with CVEs (showing top {num_sub_subsystems} sub-subsystems each) ===");
+    println!(
+        "\n=== Top {num_subsystems} Subsystems with CVEs (showing top {num_sub_subsystems} sub-subsystems each) ==="
+    );
 
     // Find all .sha1 files recursively in published directory
     let published_dir = cve_root.join("cve").join("published");
@@ -710,7 +766,8 @@ fn show_subsystem_stats(
         collect_subsystem_data(&published_dir, kernel_tree, show_authors);
 
     // Convert to vec and sort by CVE count
-    let mut subsystems: Vec<_> = main_subsystems.iter()
+    let mut subsystems: Vec<_> = main_subsystems
+        .iter()
         .map(|(name, cves)| (name.clone(), cves.len()))
         .collect();
     subsystems.sort_by_key(|e| std::cmp::Reverse(e.1));
@@ -721,7 +778,8 @@ fn show_subsystem_stats(
 
         // Find sub-subsystems for this main subsystem
         let sub_prefix = format!("{subsystem}_");
-        let mut sub_entries: Vec<_> = sub_subsystems.iter()
+        let mut sub_entries: Vec<_> = sub_subsystems
+            .iter()
             .filter(|(name, _)| name.starts_with(&sub_prefix))
             .map(|(name, cves)| (name.replace('_', "/"), cves.len()))
             .collect();
@@ -807,8 +865,9 @@ fn get_kernel_versions(sha1_file: &Path, version_type: &str) -> Result<Option<St
             let parts: Vec<&str> = version_str.split('.').collect();
             if parts.len() == 2 {
                 // Only accept if it matches the pattern ^\d+\.\d+$
-                if parts[0].chars().all(|c| c.is_ascii_digit()) &&
-                   parts[1].chars().all(|c| c.is_ascii_digit()) {
+                if parts[0].chars().all(|c| c.is_ascii_digit())
+                    && parts[1].chars().all(|c| c.is_ascii_digit())
+                {
                     return Ok(Some(version_str.to_string()));
                 }
             }
@@ -827,7 +886,9 @@ fn show_version_stats(cve_root: &Path, num_versions: usize) {
     let sha1_files: Vec<_> = WalkDir::new(&published_dir)
         .into_iter()
         .filter_map(Result::ok)
-        .filter(|e| e.file_type().is_file() && e.path().extension().is_some_and(|ext| ext == "sha1"))
+        .filter(|e| {
+            e.file_type().is_file() && e.path().extension().is_some_and(|ext| ext == "sha1")
+        })
         .map(|e| e.path().to_path_buf())
         .collect();
 
@@ -836,22 +897,22 @@ fn show_version_stats(cve_root: &Path, num_versions: usize) {
     let mut vuln_versions: HashMap<String, usize> = HashMap::new();
 
     // Process files in parallel
-    let fixed_results: Vec<_> = sha1_files.par_iter()
-        .filter_map(|sha1_file| {
-            match get_kernel_versions(sha1_file, "fixed") {
-                Ok(Some(version)) => Some(version),
-                _ => None,
-            }
+    let fixed_results: Vec<_> = sha1_files
+        .par_iter()
+        .filter_map(|sha1_file| match get_kernel_versions(sha1_file, "fixed") {
+            Ok(Some(version)) => Some(version),
+            _ => None,
         })
         .collect();
 
-    let vuln_results: Vec<_> = sha1_files.par_iter()
-        .filter_map(|sha1_file| {
-            match get_kernel_versions(sha1_file, "vulnerable") {
+    let vuln_results: Vec<_> = sha1_files
+        .par_iter()
+        .filter_map(
+            |sha1_file| match get_kernel_versions(sha1_file, "vulnerable") {
                 Ok(Some(version)) => Some(version),
                 _ => None,
-            }
-        })
+            },
+        )
         .collect();
 
     // Count each version
@@ -900,16 +961,22 @@ fn collect_time_to_fix_data(
     let sha1_files: Vec<_> = WalkDir::new(published_dir)
         .into_iter()
         .filter_map(Result::ok)
-        .filter(|e| e.file_type().is_file() && e.path().extension().is_some_and(|ext| ext == "sha1"))
+        .filter(|e| {
+            e.file_type().is_file() && e.path().extension().is_some_and(|ext| ext == "sha1")
+        })
         .map(|e| e.path().to_path_buf())
         .collect();
 
     // Process files in parallel to get time-to-fix data
-    println!("Processing {} SHA1 files to determine time-to-fix...", sha1_files.len());
+    println!(
+        "Processing {} SHA1 files to determine time-to-fix...",
+        sha1_files.len()
+    );
 
     // Gather dyad files that correspond to sha1 files for easier processing
     // Since we'll need to check both vulnerable and fixed commits
-    let dyad_files: Vec<_> = sha1_files.iter()
+    let dyad_files: Vec<_> = sha1_files
+        .iter()
         .map(|f| (f.clone(), f.with_extension("dyad")))
         .filter(|(_, dyad)| dyad.exists())
         .collect();
@@ -917,7 +984,8 @@ fn collect_time_to_fix_data(
     println!("Found {} dyad files", dyad_files.len());
 
     // Process dyad files in parallel to get TTF data
-    let results: Vec<(String, Option<i64>)> = dyad_files.par_iter()
+    let results: Vec<(String, Option<i64>)> = dyad_files
+        .par_iter()
         .filter_map(|(sha1_file, dyad_file)| {
             let cve_id = sha1_file.file_stem().unwrap().to_string_lossy().to_string();
 
@@ -944,8 +1012,14 @@ fn collect_time_to_fix_data(
                     }
 
                     // Get the commit dates
-                    let Ok(Some(vuln_date)) = get_commit_author_date_git(kernel_tree, vuln_commit) else { continue };
-                    let Ok(Some(fix_date)) = get_commit_author_date_git(kernel_tree, fix_commit) else { continue };
+                    let Ok(Some(vuln_date)) = get_commit_author_date_git(kernel_tree, vuln_commit)
+                    else {
+                        continue;
+                    };
+                    let Ok(Some(fix_date)) = get_commit_author_date_git(kernel_tree, fix_commit)
+                    else {
+                        continue;
+                    };
 
                     // Calculate days between dates
                     let days = (fix_date - vuln_date).num_days();
@@ -1008,7 +1082,7 @@ fn process_time_to_fix_stats(results: &[(String, Option<i64>)]) {
         let avg_days = ttf_days.iter().sum::<i64>() as f64 / total_cves as f64;
 
         // Calculate median
-        ttf_days.sort_unstable();  // Using sort_unstable as it's faster for primitives
+        ttf_days.sort_unstable(); // Using sort_unstable as it's faster for primitives
         let median_days = if total_cves.is_multiple_of(2) {
             let mid = total_cves / 2;
             #[allow(clippy::cast_precision_loss)]
@@ -1045,9 +1119,12 @@ fn process_time_to_fix_stats(results: &[(String, Option<i64>)]) {
 
         // Add start and end date range
         let now = chrono::Local::now().naive_local().date();
-        println!("\nStatistics calculated from {} to {}",
-                NaiveDate::from_ymd_opt(2024, 1, 21).unwrap_or_else(|| now - chrono::Duration::days(365)),
-                now);
+        println!(
+            "\nStatistics calculated from {} to {}",
+            NaiveDate::from_ymd_opt(2024, 1, 21)
+                .unwrap_or_else(|| now - chrono::Duration::days(365)),
+            now
+        );
     }
 }
 
@@ -1066,7 +1143,10 @@ fn show_time_to_fix_stats(cve_root: &Path, kernel_tree: &Path) {
 }
 
 /// Get the author date for a commit by hash using git command
-fn get_commit_author_date_git(kernel_tree: &Path, commit_hash: &str) -> Result<Option<chrono::NaiveDate>> {
+fn get_commit_author_date_git(
+    kernel_tree: &Path,
+    commit_hash: &str,
+) -> Result<Option<chrono::NaiveDate>> {
     // Get the author date using git command
     // --format=%at gives us the author timestamp in Unix epoch seconds
     let output = std::process::Command::new("git")
@@ -1080,7 +1160,8 @@ fn get_commit_author_date_git(kernel_tree: &Path, commit_hash: &str) -> Result<O
     }
 
     let timestamp_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    let timestamp = timestamp_str.parse::<i64>()
+    let timestamp = timestamp_str
+        .parse::<i64>()
         .context(format!("Failed to parse timestamp: {timestamp_str}"))?;
 
     // Convert to chrono date

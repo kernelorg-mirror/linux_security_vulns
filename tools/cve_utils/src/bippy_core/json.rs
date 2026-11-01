@@ -15,8 +15,8 @@ use super::cve::{
 use super::file::read_uuid;
 use super::policy;
 use super::version::{
-    determine_default_status, generate_cpe_ranges, generate_git_ranges, generate_version_ranges,
-    VersionRangeOutput,
+    VersionRangeOutput, determine_default_status, generate_cpe_ranges, generate_git_ranges,
+    generate_version_ranges,
 };
 use crate::dyad::DyadEntry;
 
@@ -64,10 +64,7 @@ fn get_uuid() -> Result<String> {
 }
 
 /// Prepare dyad entries and affected files
-fn prepare_vulnerability_data(
-    git_sha_full: &str,
-    in_dyad_entries: &[DyadEntry],
-) -> Vec<DyadEntry> {
+fn prepare_vulnerability_data(git_sha_full: &str, in_dyad_entries: &[DyadEntry]) -> Vec<DyadEntry> {
     // Clone dyad entries since we might need to modify them
     let mut dyad_entries = in_dyad_entries.to_vec();
 
@@ -302,8 +299,8 @@ pub fn generate_json(params: &CveRecordParams) -> Result<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::cve::CveRecord;
+    use super::*;
 
     #[test]
     fn test_process_description() {
@@ -328,8 +325,8 @@ mod tests {
 
     #[test]
     fn test_generate_references() {
-        use crate::dyad::DyadEntry;
         use crate::Kernel;
+        use crate::dyad::DyadEntry;
 
         // Helper function to create test kernels
         fn create_test_kernel(_version: &str, git_id: &str) -> Kernel {
@@ -375,12 +372,16 @@ mod tests {
         // so we'll only check for the additional references
 
         // Check that additional references were added
-        assert!(references
-            .iter()
-            .any(|r| r.url == "https://example.com/ref1"));
-        assert!(references
-            .iter()
-            .any(|r| r.url == "https://example.com/ref2"));
+        assert!(
+            references
+                .iter()
+                .any(|r| r.url == "https://example.com/ref1")
+        );
+        assert!(
+            references
+                .iter()
+                .any(|r| r.url == "https://example.com/ref2")
+        );
 
         // Test with no dyad entries and no additional references
         let references = generate_references(&[], &[], git_sha_full);

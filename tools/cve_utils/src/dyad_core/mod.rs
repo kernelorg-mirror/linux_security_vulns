@@ -10,7 +10,7 @@
 //             fork one dyad process per CVE.
 
 use crate::{Kernel, KernelPair};
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use std::fmt::Write;
 
 mod kernel_pairs;

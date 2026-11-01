@@ -64,8 +64,7 @@ fn all_rationales_fit_the_record_field() {
             let file = CvssFile::read(path).ok()?;
             let rationale = file.rationale.as_ref()?;
             let length = rationale.to_scenario_value().chars().count();
-            (length > MAX_SCENARIO_LEN)
-                .then(|| format!("{}: {length} characters", path.display()))
+            (length > MAX_SCENARIO_LEN).then(|| format!("{}: {length} characters", path.display()))
         })
         .collect();
 

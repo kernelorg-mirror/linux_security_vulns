@@ -37,10 +37,7 @@ const VALID_VECTORS: &[(&str, f64)] = &[
 #[test]
 fn all_valid_vectors_produce_correct_scores() {
     for (vector, expected_score) in VALID_VECTORS {
-        let output = cvss_cmd()
-            .args(["--vector-only", vector])
-            .output()
-            .unwrap();
+        let output = cvss_cmd().args(["--vector-only", vector]).output().unwrap();
 
         assert!(
             output.status.success(),
@@ -62,12 +59,12 @@ const INVALID_VECTORS: &[&str] = &[
     "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H", // wrong version
     "CVSS:4.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H", // wrong version
     "CVSS:3.1/AV:X/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H", // invalid AV
-    "CVSS:3.1/AV:N/AC:L",                              // too few metrics
-    "not a vector",                                     // garbage
-    "",                                                 // empty
+    "CVSS:3.1/AV:N/AC:L",                           // too few metrics
+    "not a vector",                                 // garbage
+    "",                                             // empty
     "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H/X:Y", // extra metric
-    "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H",       // 7 metrics
-    "CVSS:3.1/AV:N/AV:L/PR:N/UI:N/S:U/C:H/I:H/A:H",   // duplicate
+    "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H",     // 7 metrics
+    "CVSS:3.1/AV:N/AV:L/PR:N/UI:N/S:U/C:H/I:H/A:H", // duplicate
 ];
 
 #[test]
@@ -87,7 +84,10 @@ fn invalid_vectors_fail() {
 fn vector_roundtrip_in_output() {
     // The output should contain the canonical vector string
     cvss_cmd()
-        .args(["--vector-only", "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"])
+        .args([
+            "--vector-only",
+            "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+        ])
         .assert()
         .success()
         .stdout(predicate::str::contains(

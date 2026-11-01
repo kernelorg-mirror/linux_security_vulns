@@ -10,7 +10,7 @@ pub mod kernel;
 pub mod verhaal;
 pub mod version_utils;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use git2::Oid;
 use std::env;
 use std::fs;
@@ -20,8 +20,7 @@ use walkdir::WalkDir;
 // Re-export specific functions from submodules for easier access
 // Common utilities for finding and working with CVE data
 pub use self::common::{
-    find_cve_by_sha, find_sha_by_cve, find_vulns_dir, get_cve_root,
-    get_kernel_tree, verify_commit,
+    find_cve_by_sha, find_sha_by_cve, find_vulns_dir, get_cve_root, get_kernel_tree, verify_commit,
 };
 // Git repository operations using the git2 library
 pub use self::git_utils::{
@@ -42,8 +41,8 @@ pub use self::cmd_utils::run_command;
 pub use self::year_utils::{is_valid_year, is_year_dir_exists};
 // Version utilities
 pub use self::version_utils::{
-    compare_kernel_versions, get_rc_number, kernel_version_major,
-    version_is_mainline, version_is_queue, version_is_rc, version_major_match, KernelVersion,
+    KernelVersion, compare_kernel_versions, get_rc_number, kernel_version_major,
+    version_is_mainline, version_is_queue, version_is_rc, version_major_match,
 };
 // Kernel structures
 pub use self::kernel::{Kernel, KernelPair};
@@ -52,7 +51,7 @@ pub use self::verhaal::{FoundInResult, Verhaal};
 
 /// Common functionality shared across all CVE utilities
 pub mod common {
-    use super::{anyhow, Context, Oid, Path, PathBuf, Result, WalkDir};
+    use super::{Context, Oid, Path, PathBuf, Result, WalkDir, anyhow};
     use super::{env, fs};
     use crate::cve_utils::extract_cve_id_from_path;
 
@@ -120,25 +119,26 @@ pub mod common {
 
         // Second attempt: look from executable directory
         if let Ok(exec_path) = env::current_exe()
-            && let Some(exec_dir) = exec_path.parent() {
-                let mut current_dir = exec_dir.to_path_buf();
+            && let Some(exec_dir) = exec_path.parent()
+        {
+            let mut current_dir = exec_dir.to_path_buf();
 
-                // Check if we're already in the vulns repo
+            // Check if we're already in the vulns repo
+            if is_vulns_repo(&current_dir) {
+                return Ok(current_dir);
+            }
+
+            // Traverse up the directory tree
+            while current_dir.parent().is_some() {
                 if is_vulns_repo(&current_dir) {
                     return Ok(current_dir);
                 }
 
-                // Traverse up the directory tree
-                while current_dir.parent().is_some() {
-                    if is_vulns_repo(&current_dir) {
-                        return Ok(current_dir);
-                    }
-
-                    if !current_dir.pop() {
-                        break;
-                    }
+                if !current_dir.pop() {
+                    break;
                 }
             }
+        }
 
         Err(anyhow!(
             "Could not find vulns directory. Please run from within the vulns directory."
@@ -202,16 +202,18 @@ pub mod common {
                         .unwrap()
                         .to_string_lossy()
                         .ends_with(".sha1")
-                    && let Ok(content) = fs::read_to_string(path) {
-                        // Match either exact SHA or if it starts with the provided partial SHA
-                        if (content.trim() == sha || content.trim().starts_with(sha))
-                            && let Some(filename) = path.file_name() {
-                                let filename_str = filename.to_string_lossy();
-                                if let Some(cve_id) = filename_str.strip_suffix(".sha1") {
-                                    return Some(cve_id.to_string());
-                                }
-                            }
+                    && let Ok(content) = fs::read_to_string(path)
+                {
+                    // Match either exact SHA or if it starts with the provided partial SHA
+                    if (content.trim() == sha || content.trim().starts_with(sha))
+                        && let Some(filename) = path.file_name()
+                    {
+                        let filename_str = filename.to_string_lossy();
+                        if let Some(cve_id) = filename_str.strip_suffix(".sha1") {
+                            return Some(cve_id.to_string());
+                        }
                     }
+                }
             }
         }
 
@@ -234,13 +236,15 @@ pub mod common {
             }
 
             if let Some(filename) = path.file_name()
-                && filename.to_string_lossy() == cve_id {
-                    let sha_file = path.with_extension("sha1");
-                    if sha_file.exists()
-                        && let Ok(sha) = fs::read_to_string(sha_file) {
-                            return Some(sha.trim().to_string());
-                        }
+                && filename.to_string_lossy() == cve_id
+            {
+                let sha_file = path.with_extension("sha1");
+                if sha_file.exists()
+                    && let Ok(sha) = fs::read_to_string(sha_file)
+                {
+                    return Some(sha.trim().to_string());
                 }
+            }
         }
 
         None
@@ -298,88 +302,88 @@ pub mod common {
         }
 
         Ok(ids)
+    }
+
+    /// Find ids for a year
+    fn find_ids_for_year(year: &str, vulns_dir: &Path) -> Result<Vec<String>> {
+        let published_dir = vulns_dir.join("cve").join("published").join(year);
+
+        let mut sha_files: Vec<String> = Vec::new();
+        for entry in fs::read_dir(published_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_file() && path.extension().is_some_and(|ext| ext == "sha1") {
+                let relative_path = path.strip_prefix(vulns_dir).unwrap_or(&path);
+                sha_files.push(relative_path.display().to_string());
+            }
         }
 
-        /// Find ids for a year
-        fn find_ids_for_year(year: &str, vulns_dir: &Path) -> Result<Vec<String>> {
-            let published_dir = vulns_dir.join("cve").join("published").join(year);
-
-            let mut sha_files: Vec<String> = Vec::new();
-            for entry in fs::read_dir(published_dir)? {
-                let entry = entry?;
-                let path = entry.path();
-                if path.is_file() && path.extension().is_some_and(|ext| ext == "sha1") {
-                    let relative_path = path.strip_prefix(vulns_dir).unwrap_or(&path);
-                    sha_files.push(relative_path.display().to_string());
-                }
-            }
-
-            if sha_files.is_empty() {
-                //log::debug!("{} No CVEs found for year {}", "ERROR:".red(), year);
-            }
-
-            Ok(sha_files)
+        if sha_files.is_empty() {
+            //log::debug!("{} No CVEs found for year {}", "ERROR:".red(), year);
         }
 
-        /// Find a single CVE to process
-        fn find_single_cve(cve_id: &str, vulns_dir: &Path) -> Result<String> {
-            let cve_root = vulns_dir.join("cve");
-            if !cve_root.exists() {
-                return Err(anyhow!("CVE directory not found: {}", cve_root.display()));
-            }
+        Ok(sha_files)
+    }
 
-            // CVE ids embed the year they were assigned in (CVE-YYYY-NNNN), and the
-            // published tree is laid out by year, so look for the .sha1 file directly
-            // where it should be instead of walking the whole tree.
-            if let Some(year) = cve_id
-                .strip_prefix("CVE-")
-                .and_then(|rest| rest.split('-').next())
-            {
-                let direct_path = cve_root
-                    .join("published")
-                    .join(year)
-                    .join(format!("{cve_id}.sha1"));
-                if direct_path.is_file() {
-                    let relative_path = direct_path.strip_prefix(vulns_dir).unwrap_or(&direct_path);
-                    return Ok(relative_path.to_string_lossy().to_string());
-                }
-            }
-
-            // Fall back to looking for the CVE ID anywhere in the published directory
-            let mut cve_file = None;
-            for entry in WalkDir::new(cve_root.join("published"))
-                .into_iter()
-                .filter_map(Result::ok)
-            {
-                let path = entry.path();
-                // Skip directories and non-sha1 files
-                if !path.is_file() || !path.to_string_lossy().ends_with(".sha1") {
-                    continue;
-                }
-
-                // Extract CVE ID from path
-                match extract_cve_id_from_path(path) {
-                    Ok(id) if id == cve_id => {
-                        cve_file = Some(path.to_path_buf());
-                        break;
-                    }
-                    _ => {}
-                }
-            }
-
-            // If the file wasn't found, error out
-            let Some(cve_path) = cve_file else {
-                return Err(anyhow!("ERROR: {cve_id} is not found or is not a year."));
-            };
-
-            let relative_path = cve_path.strip_prefix(vulns_dir).unwrap_or(&cve_path);
-            Ok(relative_path.to_string_lossy().to_string())
+    /// Find a single CVE to process
+    fn find_single_cve(cve_id: &str, vulns_dir: &Path) -> Result<String> {
+        let cve_root = vulns_dir.join("cve");
+        if !cve_root.exists() {
+            return Err(anyhow!("CVE directory not found: {}", cve_root.display()));
         }
+
+        // CVE ids embed the year they were assigned in (CVE-YYYY-NNNN), and the
+        // published tree is laid out by year, so look for the .sha1 file directly
+        // where it should be instead of walking the whole tree.
+        if let Some(year) = cve_id
+            .strip_prefix("CVE-")
+            .and_then(|rest| rest.split('-').next())
+        {
+            let direct_path = cve_root
+                .join("published")
+                .join(year)
+                .join(format!("{cve_id}.sha1"));
+            if direct_path.is_file() {
+                let relative_path = direct_path.strip_prefix(vulns_dir).unwrap_or(&direct_path);
+                return Ok(relative_path.to_string_lossy().to_string());
+            }
+        }
+
+        // Fall back to looking for the CVE ID anywhere in the published directory
+        let mut cve_file = None;
+        for entry in WalkDir::new(cve_root.join("published"))
+            .into_iter()
+            .filter_map(Result::ok)
+        {
+            let path = entry.path();
+            // Skip directories and non-sha1 files
+            if !path.is_file() || !path.to_string_lossy().ends_with(".sha1") {
+                continue;
+            }
+
+            // Extract CVE ID from path
+            match extract_cve_id_from_path(path) {
+                Ok(id) if id == cve_id => {
+                    cve_file = Some(path.to_path_buf());
+                    break;
+                }
+                _ => {}
+            }
+        }
+
+        // If the file wasn't found, error out
+        let Some(cve_path) = cve_file else {
+            return Err(anyhow!("ERROR: {cve_id} is not found or is not a year."));
+        };
+
+        let relative_path = cve_path.strip_prefix(vulns_dir).unwrap_or(&cve_path);
+        Ok(relative_path.to_string_lossy().to_string())
+    }
 }
 
 /// Git repository operations commonly used across CVE tools
 pub mod git_utils {
-    use anyhow::{anyhow, Context, Result};
+    use anyhow::{Context, Result, anyhow};
     use chrono::DateTime;
     use git2::{Object, ObjectType, Oid, Repository, Status, StatusOptions};
     use log::{debug, error};
@@ -414,8 +418,7 @@ pub mod git_utils {
         REPO_CACHE.with(|cache| {
             let mut cache = cache.borrow_mut();
             if !cache.contains_key(repo_path) {
-                let repo =
-                    Repository::open(repo_path).context("Failed to open git repository")?;
+                let repo = Repository::open(repo_path).context("Failed to open git repository")?;
                 cache.insert(repo_path.to_path_buf(), repo);
             }
             Ok(f(&cache[repo_path]))
@@ -489,9 +492,7 @@ pub mod git_utils {
         let object = match repo.revparse_single(reference) {
             Ok(obj) => obj,
             Err(e) => {
-                return Err(anyhow!(
-                    "Failed to resolve reference '{reference}': {e}"
-                ));
+                return Err(anyhow!("Failed to resolve reference '{reference}': {e}"));
             }
         };
 
@@ -805,14 +806,10 @@ pub mod git_utils {
         // --name-only gives us just the file names that were changed
         let output = crate::cmd_utils::run_command(
             "git",
-            &[
-                "show",
-                "--pretty=format:",
-                "--name-only",
-                &commit_id,
-            ],
-            Some(&kernel_tree_str)
-        ).context("Failed to run git show command")?;
+            &["show", "--pretty=format:", "--name-only", &commit_id],
+            Some(&kernel_tree_str),
+        )
+        .context("Failed to run git show command")?;
 
         // Split the output into lines and filter out empty lines
         let affected_files: Vec<String> = output
@@ -845,7 +842,11 @@ pub mod git_utils {
     /// - The git repository cannot be opened at the specified path
     /// - The provided git SHA is not a valid format
     /// - The commit cannot be found in the repository
-    pub fn get_commit_details(kernel_tree: &Path, git_sha: &str, _format_type: Option<&str>) -> Result<String> {
+    pub fn get_commit_details(
+        kernel_tree: &Path,
+        git_sha: &str,
+        _format_type: Option<&str>,
+    ) -> Result<String> {
         with_repository(kernel_tree, |repo| {
             // Try to resolve the reference instead of direct Oid parsing
             let object = repo
@@ -960,9 +961,10 @@ pub mod git_utils {
             }
 
             if let Ok(path) = entry.path()
-                && patterns.iter().any(|pattern| match_pattern(path, pattern)) {
-                    modified_files.push(PathBuf::from(path));
-                }
+                && patterns.iter().any(|pattern| match_pattern(path, pattern))
+            {
+                modified_files.push(PathBuf::from(path));
+            }
         }
 
         Ok(modified_files)
@@ -974,8 +976,8 @@ pub mod git_utils {
     #[must_use]
     pub fn match_pattern(path: &str, pattern: &str) -> bool {
         pattern.strip_prefix("*").map_or_else(
-            || path == pattern, // Exact match
-            |suffix| path.ends_with(suffix) // Handle *.ext pattern
+            || path == pattern,              // Exact match
+            |suffix| path.ends_with(suffix), // Handle *.ext pattern
         )
     }
 
@@ -1039,7 +1041,7 @@ pub mod git_utils {
 
 /// CVE file operations commonly used across tools
 pub mod cve_utils {
-    use anyhow::{anyhow, Context, Result};
+    use anyhow::{Context, Result, anyhow};
     use std::fs;
     use std::path::Path;
 
@@ -1070,9 +1072,10 @@ pub mod cve_utils {
                 // Handle filenames with extensions (e.g., CVE-2023-12345.mbox)
                 if file_name_str.contains('.') {
                     if let Some(name_part) = file_name_str.split('.').next()
-                        && name_part.starts_with("CVE-") {
-                            return Ok(name_part.to_string());
-                        }
+                        && name_part.starts_with("CVE-")
+                    {
+                        return Ok(name_part.to_string());
+                    }
                 } else {
                     return Ok(file_name_str.to_string());
                 }
@@ -1080,20 +1083,21 @@ pub mod cve_utils {
 
             // If filename is file stem without the "CVE-" prefix, try the parent directory
             if let Some(parent) = path.parent()
-                && let Some(parent_name) = parent.file_name() {
-                    let parent_str = parent_name.to_string_lossy();
-                    if parent_str.starts_with("CVE-") {
-                        return Ok(parent_str.to_string());
-                    }
+                && let Some(parent_name) = parent.file_name()
+            {
+                let parent_str = parent_name.to_string_lossy();
+                if parent_str.starts_with("CVE-") {
+                    return Ok(parent_str.to_string());
+                }
 
-                    // Try to find CVE pattern in path components
-                    for component in path.components() {
-                        let comp_str = component.as_os_str().to_string_lossy();
-                        if comp_str.starts_with("CVE-") {
-                            return Ok(comp_str.to_string());
-                        }
+                // Try to find CVE pattern in path components
+                for component in path.components() {
+                    let comp_str = component.as_os_str().to_string_lossy();
+                    if comp_str.starts_with("CVE-") {
+                        return Ok(comp_str.to_string());
                     }
                 }
+            }
         }
 
         // If we got to this point, try to find CVE pattern in the entire path string
@@ -1156,7 +1160,10 @@ pub mod cve_utils {
         }
 
         // Get all reserved CVE IDs
-        let mut entries: Vec<_> = fs::read_dir(reserved_dir).unwrap().map(|r| r.unwrap()).collect();
+        let mut entries: Vec<_> = fs::read_dir(reserved_dir)
+            .unwrap()
+            .map(|r| r.unwrap())
+            .collect();
         // Sort them so that we always pick the lowest number first
         entries.sort_by_key(std::fs::DirEntry::path);
 
@@ -1185,13 +1192,16 @@ pub mod cve_utils {
             }
         }
 
-        Err(anyhow!("No available CVE IDs found in {}", reserved_dir.display()))
+        Err(anyhow!(
+            "No available CVE IDs found in {}",
+            reserved_dir.display()
+        ))
     }
 }
 
 /// Git configuration utilities
 pub mod git_config {
-    use anyhow::{anyhow, Context, Result};
+    use anyhow::{Context, Result, anyhow};
     use git2::Config;
 
     /// Gets a value from git configuration
@@ -1228,7 +1238,7 @@ pub mod git_config {
 /// CVE ID validation and processing
 pub mod cve_validation {
     use super::common;
-    use anyhow::{anyhow, Context, Result};
+    use anyhow::{Context, Result, anyhow};
     use regex::Regex;
     use std::path::{Path, PathBuf};
     use walkdir::WalkDir;
@@ -1241,8 +1251,8 @@ pub mod cve_validation {
     /// - The regex pattern fails to compile
     /// - The CVE ID does not match the expected format (CVE-YYYY-NNNNN)
     pub fn extract_year_from_cve(cve_id: &str) -> Result<String> {
-        let re = Regex::new(r"(?i)CVE-(\d{4})-\d+")
-            .context("Failed to compile CVE regex pattern")?;
+        let re =
+            Regex::new(r"(?i)CVE-(\d{4})-\d+").context("Failed to compile CVE regex pattern")?;
 
         re.captures(cve_id)
             .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()))
@@ -1329,7 +1339,7 @@ pub mod cve_validation {
 
 /// Command execution utilities
 pub mod cmd_utils {
-    use anyhow::{anyhow, Context, Result};
+    use anyhow::{Context, Result, anyhow};
     use std::process::Command;
 
     /// Runs a command and returns its output as a string
@@ -1359,9 +1369,7 @@ pub mod cmd_utils {
 
         if !output.status.success() {
             let error = String::from_utf8_lossy(&output.stderr);
-            return Err(anyhow!(
-                "Command failed: {cmd} {args:?}\nError: {error}"
-            ));
+            return Err(anyhow!("Command failed: {cmd} {args:?}\nError: {error}"));
         }
 
         Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
@@ -1448,8 +1456,10 @@ mod tests {
         // We expect an error, but it should NOT contain zero padding
         assert!(result.is_err(), "Result should be an error for invalid SHA");
         let err = result.unwrap_err().to_string();
-        assert!(!err.contains("0000000000000000000000000000"),
-                "Error shouldn't contain zero padding");
+        assert!(
+            !err.contains("0000000000000000000000000000"),
+            "Error shouldn't contain zero padding"
+        );
         // Don't assert on specific error message text as it may vary
     }
 
@@ -1542,7 +1552,10 @@ mod tests {
 
     #[test]
     fn test_match_pattern_exact() {
-        assert!(git_utils::match_pattern("drivers/net/foo.c", "drivers/net/foo.c"));
+        assert!(git_utils::match_pattern(
+            "drivers/net/foo.c",
+            "drivers/net/foo.c"
+        ));
     }
 
     #[test]
@@ -1557,12 +1570,18 @@ mod tests {
 
     #[test]
     fn test_match_pattern_no_match() {
-        assert!(!git_utils::match_pattern("other/file.c", "drivers/net/foo.c"));
+        assert!(!git_utils::match_pattern(
+            "other/file.c",
+            "drivers/net/foo.c"
+        ));
     }
 
     #[test]
     fn test_match_pattern_glob_deep_path() {
-        assert!(git_utils::match_pattern("drivers/net/ethernet/intel/e1000e/netdev.c", "*.c"));
+        assert!(git_utils::match_pattern(
+            "drivers/net/ethernet/intel/e1000e/netdev.c",
+            "*.c"
+        ));
     }
 
     // --- Tests for is_valid_year ---

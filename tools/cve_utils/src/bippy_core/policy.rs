@@ -287,8 +287,12 @@ mod tests {
 
         // Mixed entries - should issue CVE (at least one real window)
         let entries = vec![
-            dyad_entry("6.1:7bd7ad3c310cd6766f170927381eea0aa6f46c69:6.1:1a0398915d2243fc14be6506a6d226e0593a1c33"),
-            dyad_entry("5.15:11c52d250b34a0862edc29db03fbec23b30db6da:5.16:2b503c8598d1b232e7fc7526bce9326d92331541"),
+            dyad_entry(
+                "6.1:7bd7ad3c310cd6766f170927381eea0aa6f46c69:6.1:1a0398915d2243fc14be6506a6d226e0593a1c33",
+            ),
+            dyad_entry(
+                "5.15:11c52d250b34a0862edc29db03fbec23b30db6da:5.16:2b503c8598d1b232e7fc7526bce9326d92331541",
+            ),
         ];
         assert!(should_issue_cve(&entries));
 
@@ -349,5 +353,4 @@ mod tests {
             "a".repeat(MAX_DESCRIPTION_LENGTH - 1)
         );
     }
-
 }

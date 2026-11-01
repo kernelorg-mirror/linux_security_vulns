@@ -5,7 +5,7 @@
 //
 // Copyright (c) 2026 - Sasha Levin <sashal@kernel.org>
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use std::fmt;
 
 use super::metrics::CvssMetrics;
@@ -354,7 +354,10 @@ fn dedent(text: &str) -> String {
     }
 
     text.lines()
-        .map(|line| line.strip_prefix(common).unwrap_or_else(|| line.trim_start()))
+        .map(|line| {
+            line.strip_prefix(common)
+                .unwrap_or_else(|| line.trim_start())
+        })
         .collect::<Vec<_>>()
         .join("\n")
 }
@@ -685,7 +688,10 @@ mod tests {
         let lines: Vec<&str> = rendered.trim_end().lines().collect();
         assert!(lines.len() > 1);
         for line in &lines {
-            assert!(!line.starts_with(' '), "prose must not be indented: {line:?}");
+            assert!(
+                !line.starts_with(' '),
+                "prose must not be indented: {line:?}"
+            );
             assert!(line.chars().count() <= WRAP_WIDTH);
         }
     }
@@ -706,10 +712,12 @@ mod tests {
         let r = Rationale::parse(&long).unwrap();
         assert!(r.to_scenario_value().chars().count() > MAX_SCENARIO_LEN);
         assert!(r.checked_scenario_value().is_err());
-        assert!(Rationale::parse(&full_rationale())
-            .unwrap()
-            .checked_scenario_value()
-            .is_ok());
+        assert!(
+            Rationale::parse(&full_rationale())
+                .unwrap()
+                .checked_scenario_value()
+                .is_ok()
+        );
     }
 
     #[test]
@@ -737,10 +745,7 @@ mod tests {
     fn validate_rejects_missing_metric() {
         let metrics = parse_vector(VECTOR).unwrap();
         let text = full_rationale().replace("A:H - panics outright on panic_on_oops builds", "");
-        assert!(Rationale::parse(&text)
-            .unwrap()
-            .validate(&metrics)
-            .is_err());
+        assert!(Rationale::parse(&text).unwrap().validate(&metrics).is_err());
     }
 
     #[test]
@@ -750,10 +755,7 @@ mod tests {
             "AC:L - fully deterministic, no race to win",
             "AV:L - said twice",
         );
-        assert!(Rationale::parse(&text)
-            .unwrap()
-            .validate(&metrics)
-            .is_err());
+        assert!(Rationale::parse(&text).unwrap().validate(&metrics).is_err());
     }
 
     #[test]
@@ -761,10 +763,12 @@ mod tests {
         let metrics = parse_vector(VECTOR).unwrap();
         let mut lines: Vec<String> = full_rationale().lines().map(str::to_string).collect();
         lines.swap(0, 1);
-        assert!(Rationale::parse(&lines.join("\n"))
-            .unwrap()
-            .validate(&metrics)
-            .is_err());
+        assert!(
+            Rationale::parse(&lines.join("\n"))
+                .unwrap()
+                .validate(&metrics)
+                .is_err()
+        );
     }
 
     #[test]

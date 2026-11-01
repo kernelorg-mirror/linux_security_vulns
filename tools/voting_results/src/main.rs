@@ -2,7 +2,7 @@
 //
 // Copyright (c) 2025 - Sasha Levin <sashal@kernel.org>
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use clap::Parser;
 use git2::Repository;
 use owo_colors::{OwoColorize, Stream::Stdout};
@@ -118,7 +118,10 @@ impl VotingResults {
         let proposed_dir = cve_dir.join("review").join("proposed");
 
         if !proposed_dir.exists() {
-            return Err(anyhow!("Cannot find review directory: {}", proposed_dir.display()));
+            return Err(anyhow!(
+                "Cannot find review directory: {}",
+                proposed_dir.display()
+            ));
         }
 
         // Load the CVE records once so that each commit only needs a set
@@ -197,9 +200,10 @@ impl VotingResults {
                 let file_name = entry.file_name().to_string_lossy().to_string();
 
                 if regex.is_match(&file_name)
-                    && let Some(reviewer) = file_name.split('-').next_back() {
-                        reviewer_set.insert(reviewer.to_string());
-                    }
+                    && let Some(reviewer) = file_name.split('-').next_back()
+                {
+                    reviewer_set.insert(reviewer.to_string());
+                }
             }
         }
 
@@ -391,9 +395,10 @@ impl VotingResults {
 
             // Use the existing UPSTREAM_REGEX to extract the SHA
             if let Some(captures) = UPSTREAM_REGEX.captures(message)
-                && let Some(sha_match) = captures.get(0) {
-                    return sha_match.as_str().to_string();
-                }
+                && let Some(sha_match) = captures.get(0)
+            {
+                return sha_match.as_str().to_string();
+            }
         }
 
         // If all else fails, return original SHA
@@ -471,9 +476,10 @@ impl VotingResults {
                     };
 
                     if let Some(c) = commit
-                        && let Ok(Some(commit_subject)) = c.summary() {
-                            sha_subjects.insert(commit_subject.to_string());
-                        }
+                        && let Ok(Some(commit_subject)) = c.summary()
+                    {
+                        sha_subjects.insert(commit_subject.to_string());
+                    }
                 }
 
                 lines.push(line);
@@ -629,12 +635,13 @@ impl VotingResults {
                 let path = entry.path();
                 if path.is_file()
                     && path.extension().is_some_and(|ext| ext == "sha1")
-                    && let Ok(content) = fs::read_to_string(path) {
-                        // A record can list more than one SHA, one per line
-                        for sha in content.split_whitespace() {
-                            cve_shas.insert(sha.to_string());
-                        }
+                    && let Ok(content) = fs::read_to_string(path)
+                {
+                    // A record can list more than one SHA, one per line
+                    for sha in content.split_whitespace() {
+                        cve_shas.insert(sha.to_string());
                     }
+                }
             }
         }
 
@@ -657,12 +664,7 @@ impl VotingResults {
 
         for file_path in &self.annotated_files {
             if let Ok(file) = File::open(file_path) {
-                annotations.push(
-                    BufReader::new(file)
-                        .lines()
-                        .map_while(Result::ok)
-                        .collect(),
-                );
+                annotations.push(BufReader::new(file).lines().map_while(Result::ok).collect());
             }
         }
 
@@ -689,18 +691,19 @@ impl VotingResults {
             // If found, check if there's a next line (the annotation)
             let mut rest = lines[pos + 1..].iter();
             if let Some(annotation_line) = rest.next()
-                && !annotation_line.is_empty() {
-                    println!("  {annotation_line}");
+                && !annotation_line.is_empty()
+            {
+                println!("  {annotation_line}");
 
-                    // Check for multi-line annotations (lines starting with two spaces)
-                    for continuation in rest {
-                        if continuation.starts_with("  ") {
-                            println!("  {continuation}");
-                        } else {
-                            break;
-                        }
+                // Check for multi-line annotations (lines starting with two spaces)
+                for continuation in rest {
+                    if continuation.starts_with("  ") {
+                        println!("  {continuation}");
+                    } else {
+                        break;
                     }
                 }
+            }
         }
     }
 
@@ -970,12 +973,16 @@ mod tests {
         voting_results.identify_guest_reviewers();
 
         assert_eq!(voting_results.guest_reviewers.len(), 2);
-        assert!(voting_results
-            .guest_reviewers
-            .contains(&"guest1".to_string()));
-        assert!(voting_results
-            .guest_reviewers
-            .contains(&"guest2".to_string()));
+        assert!(
+            voting_results
+                .guest_reviewers
+                .contains(&"guest1".to_string())
+        );
+        assert!(
+            voting_results
+                .guest_reviewers
+                .contains(&"guest2".to_string())
+        );
         assert!(!voting_results.guest_reviewers.contains(&"greg".to_string()));
     }
 
@@ -1006,13 +1013,17 @@ mod tests {
         assert!(voting_results.commits_by_pattern.contains_key("greg,lee"));
         assert!(voting_results.commits_by_pattern.contains_key("greg,sasha"));
         assert!(voting_results.commits_by_pattern.contains_key("lee,sasha"));
-        assert!(voting_results
-            .commits_by_pattern
-            .contains_key("greg,guest1"));
+        assert!(
+            voting_results
+                .commits_by_pattern
+                .contains_key("greg,guest1")
+        );
         assert!(voting_results.commits_by_pattern.contains_key("lee,guest1"));
-        assert!(voting_results
-            .commits_by_pattern
-            .contains_key("sasha,guest1"));
+        assert!(
+            voting_results
+                .commits_by_pattern
+                .contains_key("sasha,guest1")
+        );
     }
 
     // Test check_for_cve function
@@ -1139,16 +1150,20 @@ mod tests {
 
         // Should only identify guest1 as a guest reviewer
         assert_eq!(voting_results.guest_reviewers.len(), 1);
-        assert!(voting_results
-            .guest_reviewers
-            .contains(&"guest1".to_string()));
+        assert!(
+            voting_results
+                .guest_reviewers
+                .contains(&"guest1".to_string())
+        );
 
         // Primary reviewers should not be identified as guests
         assert!(!voting_results.guest_reviewers.contains(&"greg".to_string()));
         assert!(!voting_results.guest_reviewers.contains(&"lee".to_string()));
-        assert!(!voting_results
-            .guest_reviewers
-            .contains(&"sasha".to_string()));
+        assert!(
+            !voting_results
+                .guest_reviewers
+                .contains(&"sasha".to_string())
+        );
     }
 
     #[test]
@@ -1203,7 +1218,8 @@ mod tests {
         ));
 
         // Validate kernel tree path
-        assert!(kernel_tree.is_dir(), 
+        assert!(
+            kernel_tree.is_dir(),
             "CVEKERNELTREE directory does not exist: {}",
             kernel_tree.display()
         );

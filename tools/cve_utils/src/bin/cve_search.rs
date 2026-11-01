@@ -2,11 +2,11 @@
 //
 // Copyright (c) 2025 - Sasha Levin <sashal@kernel.org>
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use clap::Parser;
-use owo_colors::OwoColorize;
 use cve_utils::common;
 use cve_utils::print_git_error_details;
+use owo_colors::OwoColorize;
 
 /// Search the published CVE records for a git SHA or find a git SHA associated with a CVE ID
 #[derive(Parser, Debug)]
@@ -47,20 +47,27 @@ fn main() -> Result<()> {
     if let Ok(_git_sha_full) = cve_utils::get_full_sha(&kernel_tree, &args.search_string) {
         // It's a valid SHA, search for it in the CVE records
         if let Some(cve) = common::find_cve_by_sha(&cve_root, &args.search_string) {
-            println!("{} is assigned to git id {}",
-                     cve.cyan(),
-                     args.search_string.green());
+            println!(
+                "{} is assigned to git id {}",
+                cve.cyan(),
+                args.search_string.green()
+            );
             return Ok(());
         }
-        println!("git sha1 {} not found in any CVE record.", args.search_string);
+        println!(
+            "git sha1 {} not found in any CVE record.",
+            args.search_string
+        );
         return Ok(());
     }
 
     // If not a SHA or SHA not found, try interpreting as a CVE ID
     if let Some(sha) = common::find_sha_by_cve(&cve_root, &args.search_string) {
-        println!("{} is assigned to git id {}",
-                 args.search_string.cyan(),
-                 sha.green());
+        println!(
+            "{} is assigned to git id {}",
+            args.search_string.cyan(),
+            sha.green()
+        );
     } else {
         println!("{} not found in any CVE record.", args.search_string);
     }
@@ -86,7 +93,11 @@ mod tests {
         for (cve_id, expected_sha) in test_cases {
             let result = common::find_sha_by_cve(&cve_root, cve_id);
             assert!(result.is_some(), "Should find SHA for {cve_id}");
-            assert_eq!(result.unwrap(), expected_sha, "SHA should match for {cve_id}");
+            assert_eq!(
+                result.unwrap(),
+                expected_sha,
+                "SHA should match for {cve_id}"
+            );
         }
     }
 
@@ -121,8 +132,15 @@ mod tests {
 
         for (partial_sha, expected_cve) in test_cases {
             let result = common::find_cve_by_sha(&cve_root, partial_sha);
-            assert!(result.is_some(), "Should find CVE for partial SHA {partial_sha}");
-            assert_eq!(result.unwrap(), expected_cve, "CVE should match for partial SHA {partial_sha}");
+            assert!(
+                result.is_some(),
+                "Should find CVE for partial SHA {partial_sha}"
+            );
+            assert_eq!(
+                result.unwrap(),
+                expected_cve,
+                "CVE should match for partial SHA {partial_sha}"
+            );
         }
     }
 

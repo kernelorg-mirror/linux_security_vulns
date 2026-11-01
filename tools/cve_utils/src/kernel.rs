@@ -17,10 +17,10 @@
 //! of the git tree must be in the CVEKERNELTREE environment variable.
 //!
 
+use crate::Verhaal;
 use crate::common;
 use crate::git_utils;
 use crate::version_utils;
-use crate::Verhaal;
 use anyhow::Result;
 use std::cmp::Ordering;
 use std::path::Path;
@@ -37,7 +37,6 @@ pub struct Kernel {
 }
 
 impl Kernel {
-
     /// Creates an "empty" kernel object.
     ///
     /// Sometimes you don't know when a kernel release happened, so use this as an initial
@@ -45,7 +44,8 @@ impl Kernel {
     ///
     /// Note that the kernel object created here will return false for both `is_mainline()` and
     /// `is_rc()`.
-    #[must_use] pub fn empty_kernel() -> Self {
+    #[must_use]
+    pub fn empty_kernel() -> Self {
         Self {
             version: "0".to_string(),
             git_id: "0".to_string(),
@@ -114,15 +114,18 @@ impl Kernel {
         kernel
     }
 
-    #[must_use] pub fn git_id(&self) -> String {
+    #[must_use]
+    pub fn git_id(&self) -> String {
         self.git_id.clone()
     }
 
-    #[must_use] pub fn version(&self) -> String {
+    #[must_use]
+    pub fn version(&self) -> String {
         self.version.clone()
     }
 
-    #[must_use] pub fn is_empty(&self) -> bool {
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
         if self.version == "0" && self.git_id == "0" {
             return true;
         }
@@ -130,7 +133,8 @@ impl Kernel {
     }
 
     /// Check if a kernel commit is in a mainline branch (i.e. Linus's), or in a stable branch
-    #[must_use] pub fn is_mainline(&self) -> bool {
+    #[must_use]
+    pub fn is_mainline(&self) -> bool {
         // for a "NULL" kernel, we treat that as "not mainline"
         if self.git_id == "0" {
             return false;
@@ -140,7 +144,8 @@ impl Kernel {
     }
 
     /// Check if a kernel commit is in a RC version
-    #[must_use] pub fn is_rc_version(&self) -> bool {
+    #[must_use]
+    pub fn is_rc_version(&self) -> bool {
         version_utils::version_is_rc(&self.version)
     }
 
@@ -156,22 +161,26 @@ impl Kernel {
 
     /// Return the "major" string portion of a kernel version string
     /// Used internally and also can be used externally as it might be useful for others.
-    #[must_use] pub fn major(&self) -> String {
+    #[must_use]
+    pub fn major(&self) -> String {
         version_utils::kernel_version_major(&self.version)
     }
 
     /// Return true if X.Y matches in a kernel version (i.e. the major is the same)
-    #[must_use] pub fn version_major_match(&self, k: &Self) -> bool {
+    #[must_use]
+    pub fn version_major_match(&self, k: &Self) -> bool {
         version_utils::version_major_match(&self.version, &k.version)
     }
 
     /// Get the RC number if this is an RC version
-    #[must_use] pub fn rc_number(&self) -> Option<u32> {
+    #[must_use]
+    pub fn rc_number(&self) -> Option<u32> {
         version_utils::get_rc_number(&self.version)
     }
 
     /// Returns git ids in reverse sorted order in time (i.e. newest first)
-    #[must_use] pub fn git_sort_ids(ids: &Vec<String>) -> Vec<String> {
+    #[must_use]
+    pub fn git_sort_ids(ids: &Vec<String>) -> Vec<String> {
         let kernel_tree = Self::git_dir();
         let repo_path = Path::new(&kernel_tree);
         git_utils::git_sort_ids(repo_path, ids)
@@ -179,7 +188,8 @@ impl Kernel {
 
     /// Compare the version numbers of a kernel.
     /// Will look in git if the version string is the same
-    #[must_use] pub fn compare(&self, k: &Self) -> Ordering {
+    #[must_use]
+    pub fn compare(&self, k: &Self) -> Ordering {
         // Fast path: exact same version
         if self.version == k.version {
             // If versions match exactly, check git IDs
@@ -232,8 +242,8 @@ pub struct KernelPair {
 
 #[cfg(test)]
 mod tests {
-    use crate::version_utils;
     use crate::Kernel;
+    use crate::version_utils;
     use std::cmp::Ordering;
 
     // Helper function to create a kernel object for testing.
@@ -497,7 +507,6 @@ mod tests {
         k2.git_id = "ff956a3be95b45b2a823693a8c9db740939ca35e".to_string();
         assert_eq!(k1.compare(&k2), Ordering::Equal);
         assert_eq!(k1, k2);
-
     }
 
     #[test]
@@ -523,7 +532,7 @@ mod tests {
             alloc_kernel(
                 "6.9".to_string(),
                 "22207fd5c80177b860279653d017474b2812af5e".to_string(),
-            )
+            ),
         ];
         kernels.sort();
 
@@ -553,7 +562,7 @@ mod tests {
             alloc_kernel(
                 "6.6.24".to_string(),
                 "e87e08c94c9541b4e18c4c13f2f605935f512605".to_string(),
-            )
+            ),
         ];
         kernels.sort();
 
@@ -562,7 +571,6 @@ mod tests {
         assert_eq!(kernels[2].version, "6.7.12");
         assert_eq!(kernels[3].version, "6.8.3");
         assert_eq!(kernels[4].version, "6.9");
-
     }
 
     #[test]

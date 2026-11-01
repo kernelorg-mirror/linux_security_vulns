@@ -5,7 +5,7 @@
 //
 // Copyright (c) 2026 - Sasha Levin <sashal@kernel.org>
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use clap::Parser;
 use cve_utils::common;
 use cve_utils::cvss::file::CvssFile;
@@ -120,7 +120,9 @@ fn adding_commits(repo: &Path) -> Result<HashMap<PathBuf, String>> {
         }
 
         let mut fields = line.split('\t');
-        let Some(status) = fields.next() else { continue };
+        let Some(status) = fields.next() else {
+            continue;
+        };
 
         match status.chars().next() {
             Some('A') => {
@@ -277,7 +279,9 @@ fn split_blocks(body: &str) -> Option<Vec<MessageBlock>> {
                         trimmed
                     };
 
-                    let Some(next) = lines.get(i + 1) else { continue };
+                    let Some(next) = lines.get(i + 1) else {
+                        continue;
+                    };
                     let word = next.split_whitespace().next().unwrap_or_default();
                     if content.chars().count() + word.chars().count() + 2 <= FOLD_WIDTH {
                         paragraphs.push(current.join(" ").trim().to_string());
@@ -337,7 +341,10 @@ fn repair_misfiled_paragraph(body: &str) -> Option<(String, String)> {
     let orphan = blocks[*from].paragraphs.pop()?;
     blocks[*to].paragraphs[0] = orphan;
 
-    let note = format!("moved a paragraph from {} to {}", blocks[*from].key, blocks[*to].key);
+    let note = format!(
+        "moved a paragraph from {} to {}",
+        blocks[*from].key, blocks[*to].key
+    );
     let repaired = blocks
         .iter()
         .map(|block| format!("{} - {}", block.key, block.paragraphs.join(" ")))
@@ -356,9 +363,7 @@ fn is_trailer(line: &str) -> bool {
     rest.starts_with(' ')
         && !key.is_empty()
         && key.starts_with(|c: char| c.is_ascii_uppercase())
-        && key
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '-')
+        && key.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
 }
 
 /// Collapse text that is one sentence repeated: "X X" and "X X X" become "X".
@@ -397,12 +402,7 @@ fn backfill_one(history: &History, repo: &Path, path: &Path, args: &Args) -> Out
     }
 }
 
-fn backfill_one_inner(
-    history: &History,
-    repo: &Path,
-    path: &Path,
-    args: &Args,
-) -> Result<Outcome> {
+fn backfill_one_inner(history: &History, repo: &Path, path: &Path, args: &Args) -> Result<Outcome> {
     let mut file = CvssFile::read(path)?;
 
     if file.rationale.is_some() && !args.force {
@@ -418,8 +418,8 @@ fn backfill_one_inner(
         .messages
         .get(sha)
         .ok_or_else(|| anyhow!("no message for {sha}"))?;
-    let (rationale, note) = rationale_from_message(message)
-        .context(format!("recovering the rationale from {sha}"))?;
+    let (rationale, note) =
+        rationale_from_message(message).context(format!("recovering the rationale from {sha}"))?;
 
     let per_metric = matches!(rationale, Rationale::PerMetric(_));
 
@@ -463,7 +463,10 @@ fn main() -> Result<()> {
 
     for (path, outcome) in results {
         match outcome {
-            Outcome::Backfilled { per_metric: kind, note } => {
+            Outcome::Backfilled {
+                per_metric: kind,
+                note,
+            } => {
                 if kind {
                     per_metric += 1;
                 } else {
@@ -579,7 +582,10 @@ mod tests {
                        Signed-off-by: Sasha Levin <sashal@kernel.org>\n\
                        Reviewed-by: A Third <third@example.com>\n";
 
-        let value = rationale_from_message(message).unwrap().0.to_scenario_value();
+        let value = rationale_from_message(message)
+            .unwrap()
+            .0
+            .to_scenario_value();
         assert_eq!(value, "AV:L - reachable only through local file I/O");
     }
 

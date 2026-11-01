@@ -2,7 +2,7 @@
 //
 // Copyright (c) 2025 - Sasha Levin <sashal@kernel.org>
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use clap::Parser;
 use cve_utils::common;
 use cve_utils::dyad_core;
@@ -80,7 +80,9 @@ fn main() -> Result<()> {
         None => match env::var("CVE_USER") {
             Ok(user) => user,
             Err(e) => {
-                error!("Error: CVE_USER must be set via environment variable or --cve-user option: {e}");
+                error!(
+                    "Error: CVE_USER must be set via environment variable or --cve-user option: {e}"
+                );
                 return Err(anyhow!(
                     "CVE_USER must be set via environment variable or --cve-user option"
                 ));
@@ -116,7 +118,10 @@ fn main() -> Result<()> {
 fn process_ids(sha_files: &[String], vulns_dir: &Path) {
     let total_count = sha_files.len();
 
-    println!("Updating dyad files for {} CVEs", total_count.to_string().cyan());
+    println!(
+        "Updating dyad files for {} CVEs",
+        total_count.to_string().cyan()
+    );
 
     // Set up progress bar
     let progress_bar = ProgressBar::new(total_count as u64);

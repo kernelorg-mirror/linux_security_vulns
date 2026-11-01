@@ -50,7 +50,10 @@ fn severity_from_score(score: f64) -> String {
 // mul_add()/powi() would be faster and more accurate, but they round differently
 // from the reference implementations, and a score that disagrees with NVD's
 // calculator in the last decimal place is worse than a slow one.
-#[allow(clippy::suboptimal_flops, reason = "formula transcribed verbatim from the CVSS v3.1 spec")]
+#[allow(
+    clippy::suboptimal_flops,
+    reason = "formula transcribed verbatim from the CVSS v3.1 spec"
+)]
 #[must_use]
 pub fn compute_base_score(metrics: &CvssMetrics) -> ScoreResult {
     let c = metrics.confidentiality.weight();
@@ -137,12 +140,32 @@ mod tests {
 
     /// Known vectors verified against NIST CVSS v3.1 calculator.
     const KNOWN_VECTORS: &[(&str, f64, &str)] = &[
-        ("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H", 9.8, "CRITICAL"),
-        ("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H", 10.0, "CRITICAL"),
+        (
+            "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            9.8,
+            "CRITICAL",
+        ),
+        (
+            "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
+            10.0,
+            "CRITICAL",
+        ),
         ("CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H", 7.8, "HIGH"),
-        ("CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H", 5.5, "MEDIUM"),
-        ("CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N", 6.1, "MEDIUM"),
-        ("CVSS:3.1/AV:P/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H", 4.6, "MEDIUM"),
+        (
+            "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
+            5.5,
+            "MEDIUM",
+        ),
+        (
+            "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
+            6.1,
+            "MEDIUM",
+        ),
+        (
+            "CVSS:3.1/AV:P/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+            4.6,
+            "MEDIUM",
+        ),
         ("CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H", 8.1, "HIGH"),
         ("CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H", 7.8, "HIGH"),
         ("CVSS:3.1/AV:A/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H", 8.8, "HIGH"),
@@ -154,7 +177,11 @@ mod tests {
         ("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:N", 7.5, "HIGH"),
         ("CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H", 8.8, "HIGH"),
         ("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N", 0.0, "NONE"),
-        ("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N", 5.3, "MEDIUM"),
+        (
+            "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            5.3,
+            "MEDIUM",
+        ),
         ("CVSS:3.1/AV:P/AC:H/PR:H/UI:R/S:U/C:L/I:L/A:L", 3.5, "LOW"),
         ("CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H", 8.8, "HIGH"),
     ];
@@ -210,9 +237,18 @@ mod tests {
     #[test]
     fn exhaustive_all_combinations_in_range() {
         // Test all 2592 metric combinations produce valid scores
-        let avs = [AttackVector::Network, AttackVector::Adjacent, AttackVector::Local, AttackVector::Physical];
+        let avs = [
+            AttackVector::Network,
+            AttackVector::Adjacent,
+            AttackVector::Local,
+            AttackVector::Physical,
+        ];
         let acs = [AttackComplexity::Low, AttackComplexity::High];
-        let prs = [PrivilegesRequired::None, PrivilegesRequired::Low, PrivilegesRequired::High];
+        let prs = [
+            PrivilegesRequired::None,
+            PrivilegesRequired::Low,
+            PrivilegesRequired::High,
+        ];
         let uis = [UserInteraction::None, UserInteraction::Required];
         let scopes = [Scope::Unchanged, Scope::Changed];
         let cias = [CiaImpact::High, CiaImpact::Low, CiaImpact::None];
@@ -226,9 +262,14 @@ mod tests {
                                 for i in &cias {
                                     for a in &cias {
                                         let metrics = CvssMetrics {
-                                            av: *av, ac: *ac, pr: *pr, ui: *ui,
+                                            av: *av,
+                                            ac: *ac,
+                                            pr: *pr,
+                                            ui: *ui,
                                             scope: *scope,
-                                            confidentiality: *c, integrity: *i, availability: *a,
+                                            confidentiality: *c,
+                                            integrity: *i,
+                                            availability: *a,
                                         };
                                         let result = compute_base_score(&metrics);
                                         assert!(
@@ -239,10 +280,26 @@ mod tests {
                                         // Severity must match score range
                                         match result.severity.as_str() {
                                             "NONE" => assert_eq!(result.score, 0.0),
-                                            "LOW" => assert!((0.1..=3.9).contains(&result.score), "{}", result.score),
-                                            "MEDIUM" => assert!((4.0..=6.9).contains(&result.score), "{}", result.score),
-                                            "HIGH" => assert!((7.0..=8.9).contains(&result.score), "{}", result.score),
-                                            "CRITICAL" => assert!((9.0..=10.0).contains(&result.score), "{}", result.score),
+                                            "LOW" => assert!(
+                                                (0.1..=3.9).contains(&result.score),
+                                                "{}",
+                                                result.score
+                                            ),
+                                            "MEDIUM" => assert!(
+                                                (4.0..=6.9).contains(&result.score),
+                                                "{}",
+                                                result.score
+                                            ),
+                                            "HIGH" => assert!(
+                                                (7.0..=8.9).contains(&result.score),
+                                                "{}",
+                                                result.score
+                                            ),
+                                            "CRITICAL" => assert!(
+                                                (9.0..=10.0).contains(&result.score),
+                                                "{}",
+                                                result.score
+                                            ),
                                             s => panic!("unexpected severity: {s}"),
                                         }
                                     }

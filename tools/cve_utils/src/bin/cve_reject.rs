@@ -2,17 +2,17 @@
 //
 // Copyright (c) 2025 - Sasha Levin <sashal@kernel.org>
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use clap::Parser;
-use owo_colors::OwoColorize;
 use cve_utils::common;
+use cve_utils::cve_utils::extract_cve_id_from_path;
 use cve_utils::cve_validation;
 use cve_utils::git_config;
 use cve_utils::print_git_error_details;
+use owo_colors::OwoColorize;
 use std::fs;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
-use cve_utils::cve_utils::extract_cve_id_from_path;
 
 /// Reject a reserved or published CVE entry
 #[derive(Parser, Debug)]
@@ -59,7 +59,10 @@ fn main() -> Result<()> {
     };
 
     if !is_valid {
-        return Err(anyhow!("No CVE entry found for {}, are you sure it is correct?", args.cve_entry.cyan()));
+        return Err(anyhow!(
+            "No CVE entry found for {}, are you sure it is correct?",
+            args.cve_entry.cyan()
+        ));
     }
 
     // Extract year from CVE
@@ -104,8 +107,10 @@ fn main() -> Result<()> {
 
         if reserved_files.is_empty() {
             // Not found in published or reserved area
-            return Err(anyhow!("CVE entry {} not found in published or reserved directories",
-                               args.cve_entry.cyan()));
+            return Err(anyhow!(
+                "CVE entry {} not found in published or reserved directories",
+                args.cve_entry.cyan()
+            ));
         }
         reject_reserved_cve(&args.cve_entry, &reserved_files, &rejected_dir)?;
     } else {
@@ -114,7 +119,7 @@ fn main() -> Result<()> {
             &published_files,
             &rejected_dir,
             &user_name,
-            &user_email
+            &user_email,
         )?;
     }
 
@@ -131,7 +136,7 @@ fn reject_published_cve(
     published_files: &[PathBuf],
     rejected_dir: &Path,
     user_name: &str,
-    user_email: &str
+    user_email: &str,
 ) -> Result<()> {
     // Verify we have at least 4 files (CVE, json, mbox, sha1)
     if published_files.len() < 4 {
@@ -139,7 +144,11 @@ fn reject_published_cve(
             "Found only {} files for {}, expected at least 4 (CVE, json, mbox, sha1).\nFiles are:\n{}",
             published_files.len().to_string().cyan(),
             cve_entry.cyan(),
-            published_files.iter().map(|f| format!("  {}", f.to_string_lossy().cyan())).collect::<Vec<_>>().join("\n")
+            published_files
+                .iter()
+                .map(|f| format!("  {}", f.to_string_lossy().cyan()))
+                .collect::<Vec<_>>()
+                .join("\n")
         ));
     }
 
@@ -150,7 +159,10 @@ fn reject_published_cve(
     for file in published_files {
         let file_name = file.file_name().unwrap();
         let target = rejected_dir.join(file_name);
-        fs::rename(file, &target).context(format!("Failed to move file {} to rejected directory", file.display()))?;
+        fs::rename(file, &target).context(format!(
+            "Failed to move file {} to rejected directory",
+            file.display()
+        ))?;
     }
 
     // Create the rejection email message
@@ -158,8 +170,10 @@ fn reject_published_cve(
 
     // Get necessary info from the original mbox file
     let original_mbox_path = rejected_dir.join(format!("{cve_entry}.mbox"));
-    let original_mbox_content = fs::read_to_string(&original_mbox_path)
-        .context(format!("Failed to read original mbox file at {}", original_mbox_path.display()))?;
+    let original_mbox_content = fs::read_to_string(&original_mbox_path).context(format!(
+        "Failed to read original mbox file at {}",
+        original_mbox_path.display()
+    ))?;
 
     let message_id = extract_header(&original_mbox_content, "Message-Id")
         .context("Failed to extract Message-Id from original mbox")?;
@@ -188,12 +202,20 @@ In-Reply-To: {message_id}
 "
     );
 
-    fs::write(&rejected_mbox_path, rejection_content)
-        .context(format!("Failed to write rejection email to {}", rejected_mbox_path.display()))?;
+    fs::write(&rejected_mbox_path, rejection_content).context(format!(
+        "Failed to write rejection email to {}",
+        rejected_mbox_path.display()
+    ))?;
 
-    println!("Rejected message is at {}", rejected_mbox_path.display().to_string().cyan());
+    println!(
+        "Rejected message is at {}",
+        rejected_mbox_path.display().to_string().cyan()
+    );
     println!("To send it, please run:");
-    println!("\t{}", format!("git send-email {}", rejected_mbox_path.display()).green());
+    println!(
+        "\t{}",
+        format!("git send-email {}", rejected_mbox_path.display()).green()
+    );
 
     Ok(())
 }
@@ -202,7 +224,7 @@ In-Reply-To: {message_id}
 fn reject_reserved_cve(
     cve_entry: &str,
     reserved_files: &[PathBuf],
-    rejected_dir: &Path
+    rejected_dir: &Path,
 ) -> Result<()> {
     println!("Found CVE {} in the reserved directory", cve_entry.cyan());
 
@@ -213,10 +235,16 @@ fn reject_reserved_cve(
     for file in reserved_files {
         let file_name = file.file_name().unwrap();
         let target = rejected_dir.join(file_name);
-        fs::rename(file, &target).context(format!("Failed to move file {} to rejected directory", file.display()))?;
+        fs::rename(file, &target).context(format!(
+            "Failed to move file {} to rejected directory",
+            file.display()
+        ))?;
     }
 
-    println!("Moved {} files from reserved to rejected directory", reserved_files.len().to_string().cyan());
+    println!(
+        "Moved {} files from reserved to rejected directory",
+        reserved_files.len().to_string().cyan()
+    );
     println!("Since this CVE was still reserved, no rejection email is needed.");
 
     Ok(())
@@ -232,9 +260,10 @@ fn find_cve_files(dir: &Path, cve_entry: &str) -> Vec<PathBuf> {
             if path.is_file() {
                 // Try the consolidated extraction function
                 if let Ok(id) = extract_cve_id_from_path(path)
-                    && id == cve_entry {
-                        files.push(path.to_path_buf());
-                    }
+                    && id == cve_entry
+                {
+                    files.push(path.to_path_buf());
+                }
             }
         }
     }
@@ -259,8 +288,14 @@ mod tests {
 
     #[test]
     fn test_extract_year_from_cve() {
-        assert_eq!(cve_validation::extract_year_from_cve("CVE-2023-12345").unwrap(), "2023");
-        assert_eq!(cve_validation::extract_year_from_cve("CVE-2024-67890").unwrap(), "2024");
+        assert_eq!(
+            cve_validation::extract_year_from_cve("CVE-2023-12345").unwrap(),
+            "2023"
+        );
+        assert_eq!(
+            cve_validation::extract_year_from_cve("CVE-2024-67890").unwrap(),
+            "2024"
+        );
         assert!(cve_validation::extract_year_from_cve("INVALID").is_err());
     }
 
@@ -307,10 +342,16 @@ mod tests {
         fs::write(temp_path.join("published/2023").join(cve_id), "").unwrap();
 
         // Valid CVE should return true
-        assert!(cve_validation::is_valid_cve(temp_path, cve_id).unwrap(), "Valid CVE should return true");
+        assert!(
+            cve_validation::is_valid_cve(temp_path, cve_id).unwrap(),
+            "Valid CVE should return true"
+        );
 
         // Invalid CVE should return false
-        assert!(!cve_validation::is_valid_cve(temp_path, "NON-EXISTENT").unwrap(), "Invalid CVE should return false");
+        assert!(
+            !cve_validation::is_valid_cve(temp_path, "NON-EXISTENT").unwrap(),
+            "Invalid CVE should return false"
+        );
     }
 
     #[test]
@@ -341,7 +382,11 @@ Message-Id: <test-message-id@example.com>
 This is a test CVE entry.
 ";
         fs::write(published_dir.join(format!("{cve_id}.mbox")), mbox_content).unwrap();
-        fs::write(published_dir.join(format!("{cve_id}.sha1")), "0123456789abcdef").unwrap();
+        fs::write(
+            published_dir.join(format!("{cve_id}.sha1")),
+            "0123456789abcdef",
+        )
+        .unwrap();
 
         // Perform the rejection manually
         // 1. Move the files
@@ -377,18 +422,34 @@ In-Reply-To: {message_id}
         // Verify the results
         // 1. Published directory should be empty
         let published_files_after = find_cve_files(&published_dir, cve_id);
-        assert_eq!(published_files_after.len(), 0, "Published directory should be empty");
+        assert_eq!(
+            published_files_after.len(),
+            0,
+            "Published directory should be empty"
+        );
 
         // 2. Rejected directory should have 5 files (4 original + the rejection email)
         let rejected_files = find_cve_files(&rejected_dir, cve_id);
-        assert_eq!(rejected_files.len(), 5, "Should have 5 files in rejected directory");
+        assert_eq!(
+            rejected_files.len(),
+            5,
+            "Should have 5 files in rejected directory"
+        );
 
         // 3. Check if rejection email was created with the correct format
         let rejected_mbox_content = fs::read_to_string(&rejected_mbox_path).unwrap();
-        assert!(rejected_mbox_content.contains("REJECTED:"), "Email should have REJECTED: in subject");
-        assert!(rejected_mbox_content.contains(message_id), "Email should have original Message-Id");
-        assert!(rejected_mbox_content.contains(format!("{cve_id} has now been rejected").as_str()),
-                "Email should state that the CVE is rejected");
+        assert!(
+            rejected_mbox_content.contains("REJECTED:"),
+            "Email should have REJECTED: in subject"
+        );
+        assert!(
+            rejected_mbox_content.contains(message_id),
+            "Email should have original Message-Id"
+        );
+        assert!(
+            rejected_mbox_content.contains(format!("{cve_id} has now been rejected").as_str()),
+            "Email should state that the CVE is rejected"
+        );
     }
 
     #[test]
@@ -417,7 +478,11 @@ Message-Id: <workflow-message-id@example.com>
 This is a test CVE entry for workflow testing.
 ";
         fs::write(published_dir.join(format!("{cve_id}.mbox")), mbox_content).unwrap();
-        fs::write(published_dir.join(format!("{cve_id}.sha1")), "0123456789abcdef").unwrap();
+        fs::write(
+            published_dir.join(format!("{cve_id}.sha1")),
+            "0123456789abcdef",
+        )
+        .unwrap();
 
         // Execute the rejection logic directly
 
@@ -472,17 +537,34 @@ In-Reply-To: {message_id}
         // Verify the results
         // 1. All files should be moved
         let published_files_after = find_cve_files(&published_dir, cve_id);
-        assert_eq!(published_files_after.len(), 0, "Published directory should be empty");
+        assert_eq!(
+            published_files_after.len(),
+            0,
+            "Published directory should be empty"
+        );
 
         // 2. Rejected directory should have the files
         let rejected_files = find_cve_files(&rejected_dir, cve_id);
-        assert_eq!(rejected_files.len(), 5, "Should have 5 files in rejected directory (4 original + rejection)");
+        assert_eq!(
+            rejected_files.len(),
+            5,
+            "Should have 5 files in rejected directory (4 original + rejection)"
+        );
 
         // 3. Check rejection email content
         let rejected_mbox_content = fs::read_to_string(&rejected_mbox_path).unwrap();
-        assert!(rejected_mbox_content.contains("REJECTED:"), "Email should have REJECTED: in subject");
-        assert!(rejected_mbox_content.contains(message_id), "Email should include original Message-Id");
-        assert!(rejected_mbox_content.contains(cve_id), "Email should mention the CVE ID");
+        assert!(
+            rejected_mbox_content.contains("REJECTED:"),
+            "Email should have REJECTED: in subject"
+        );
+        assert!(
+            rejected_mbox_content.contains(message_id),
+            "Email should include original Message-Id"
+        );
+        assert!(
+            rejected_mbox_content.contains(cve_id),
+            "Email should mention the CVE ID"
+        );
     }
 
     #[test]
@@ -518,7 +600,10 @@ In-Reply-To: {message_id}
         fs::rename(&reserved_file, &rejected_file).unwrap();
 
         // 5. Verify the results
-        assert!(!reserved_file.exists(), "Reserved file should not exist anymore");
+        assert!(
+            !reserved_file.exists(),
+            "Reserved file should not exist anymore"
+        );
         assert!(rejected_file.exists(), "Rejected file should exist");
     }
 }

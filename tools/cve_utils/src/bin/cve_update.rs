@@ -2,23 +2,23 @@
 //
 // Copyright (c) 2025 - Sasha Levin <sashal@kernel.org>
 
-use anyhow::{anyhow, Context, Result};
-use cve_utils::print_git_error_details;
+use anyhow::{Context, Result, anyhow};
+use clap::Parser;
 use cve_utils::bippy_core::{self, GenerateRequest};
+use cve_utils::common;
 use cve_utils::cve_validation::find_cve_id;
 use cve_utils::git_config;
+use cve_utils::print_git_error_details;
 use cve_utils::year_utils::{is_valid_year, is_year_dir_exists};
-use cve_utils::common;
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use log::error;
-use std::env;
-use std::path::{Path, PathBuf};
-use std::thread;
-use std::sync::{Arc, Mutex};
-use std::fs;
-use clap::Parser;
-use walkdir::WalkDir;
 use owo_colors::OwoColorize;
-use indicatif::{ProgressBar, ProgressStyle, MultiProgress};
+use std::env;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
+use std::thread;
+use walkdir::WalkDir;
 
 /// The identity recorded in the generated files, resolved once per run
 /// instead of once per CVE.
@@ -115,7 +115,8 @@ fn main() -> Result<()> {
             match find_cve_id(&target) {
                 Ok(Some(cve_id)) => {
                     // Extract the CVE ID from the file path for display
-                    let cve_id_str = cve_id.file_stem()
+                    let cve_id_str = cve_id
+                        .file_stem()
                         .and_then(|s| s.to_str())
                         .unwrap_or(&target);
 
@@ -130,7 +131,10 @@ fn main() -> Result<()> {
                     }
                 }
                 // Check if target is a year
-                Ok(None) if is_valid_year(&target) && is_year_dir_exists(&cve_root, &target).unwrap_or(false) => {
+                Ok(None)
+                    if is_valid_year(&target)
+                        && is_year_dir_exists(&cve_root, &target).unwrap_or(false) =>
+                {
                     if let Err(e) = update_year(&target, &user, num_threads, args.dry_run) {
                         eprintln!("Error updating year {target}: {e}");
                         print_git_error_details(&e);
@@ -138,7 +142,9 @@ fn main() -> Result<()> {
                     }
                 }
                 Ok(_) => {
-                    return Err(anyhow!("{target} is not a valid CVE ID or year with published entries"));
+                    return Err(anyhow!(
+                        "{target} is not a valid CVE ID or year with published entries"
+                    ));
                 }
                 Err(e) => {
                     eprintln!("Error: {e}");
@@ -153,7 +159,12 @@ fn main() -> Result<()> {
 }
 
 /// Update all years with published CVEs
-fn update_all_years(cve_root: &Path, user: &UserIdentity, num_threads: usize, dry_run: bool) -> Result<()> {
+fn update_all_years(
+    cve_root: &Path,
+    user: &UserIdentity,
+    num_threads: usize,
+    dry_run: bool,
+) -> Result<()> {
     let published_dir = cve_root.join("published");
 
     // Collect and sort all years numerically
@@ -164,9 +175,10 @@ fn update_all_years(cve_root: &Path, user: &UserIdentity, num_threads: usize, dr
 
         if year_path.is_dir()
             && let Some(year) = year_path.file_name().and_then(|s| s.to_str())
-            && is_valid_year(year) {
-                years.push(year.to_string());
-            }
+            && is_valid_year(year)
+        {
+            years.push(year.to_string());
+        }
     }
 
     // Sort years numerically (newest first)
@@ -202,8 +214,12 @@ fn update_year(year: &str, user: &UserIdentity, num_threads: usize, dry_run: boo
         .collect();
 
     let total_count = sha1_files.len();
-    println!("Updating {} CVE IDs for year {} with {} threads",
-             total_count.to_string().cyan(), year.green(), num_threads.to_string().cyan());
+    println!(
+        "Updating {} CVE IDs for year {} with {} threads",
+        total_count.to_string().cyan(),
+        year.green(),
+        num_threads.to_string().cyan()
+    );
 
     if dry_run {
         println!("  {} Dry run mode - no actual updates", "INFO:".blue());
@@ -223,10 +239,14 @@ fn update_year(year: &str, user: &UserIdentity, num_threads: usize, dry_run: boo
 
     // Create the main progress bar
     let progress = multi.add(ProgressBar::new(total_count as u64));
-    progress.set_style(ProgressStyle::default_bar()
-        .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})")
-        .unwrap()
-        .progress_chars("#>-"));
+    progress.set_style(
+        ProgressStyle::default_bar()
+            .template(
+                "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})",
+            )
+            .unwrap()
+            .progress_chars("#>-"),
+    );
 
     // Create a progress tracker for each thread
     let progress = Arc::new(progress);
@@ -260,7 +280,8 @@ fn update_year(year: &str, user: &UserIdentity, num_threads: usize, dry_run: boo
                     };
 
                     // Update the CVE
-                    let cve_id = file.file_stem()
+                    let cve_id = file
+                        .file_stem()
                         .and_then(|s| s.to_str())
                         .unwrap_or("unknown");
 
@@ -269,15 +290,17 @@ fn update_year(year: &str, user: &UserIdentity, num_threads: usize, dry_run: boo
                     match result {
                         Err(ref e) => {
                             // Store errors for later display
-                            update_results.lock().unwrap().push(
-                                (cve_id.to_string(), format!("ERROR: {e}"))
-                            );
+                            update_results
+                                .lock()
+                                .unwrap()
+                                .push((cve_id.to_string(), format!("ERROR: {e}")));
                         }
                         Ok(ref updated_files) if !updated_files.is_empty() => {
                             // Store successful updates
-                            update_results.lock().unwrap().push(
-                                (cve_id.to_string(), format!("Updated: {}", updated_files.join(", ")))
-                            );
+                            update_results.lock().unwrap().push((
+                                cve_id.to_string(),
+                                format!("Updated: {}", updated_files.join(", ")),
+                            ));
                         }
                         _ => {}
                     }
@@ -412,7 +435,8 @@ fn prepare_cve_files(sha1_file: &Path) -> Result<CveFileData> {
     }
 
     // Extract CVE ID and root path from the sha1 file path
-    let file_stem = sha1_file.file_stem()
+    let file_stem = sha1_file
+        .file_stem()
         .and_then(|s| s.to_str())
         .ok_or_else(|| anyhow!("Invalid SHA1 file path"))?;
 
@@ -423,8 +447,10 @@ fn prepare_cve_files(sha1_file: &Path) -> Result<CveFileData> {
     let vulnerable_file = sha1_file.with_extension("vulnerable");
     let mut vulnerable_shas = Vec::new();
     if vulnerable_file.exists() {
-        let contents = fs::read_to_string(&vulnerable_file)
-            .context(format!("Failed to read vulnerable file: {}", vulnerable_file.display()))?;
+        let contents = fs::read_to_string(&vulnerable_file).context(format!(
+            "Failed to read vulnerable file: {}",
+            vulnerable_file.display()
+        ))?;
         for line in contents.lines() {
             let sha = line.trim();
             if !sha.is_empty() {
@@ -481,8 +507,8 @@ fn update_file_if_changed(
         return Ok(());
     }
 
-    let old_content = fs::read_to_string(path)
-        .context(format!("Failed to read file: {}", path.display()))?;
+    let old_content =
+        fs::read_to_string(path).context(format!("Failed to read file: {}", path.display()))?;
 
     if meaningful_lines(&old_content, generator_marker)
         .ne(meaningful_lines(new_content, generator_marker))
@@ -498,10 +524,10 @@ fn update_file_if_changed(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::tempdir;
-    use std::io::Write;
-    use std::fs::File;
     use cve_utils::cve_validation::extract_year_from_cve;
+    use std::fs::File;
+    use std::io::Write;
+    use tempfile::tempdir;
 
     #[test]
     fn test_is_valid_year() {
@@ -595,12 +621,36 @@ mod tests {
 
         // Create some sample CVEs for each year
         let sample_cves = [
-            ("CVE-2021-33909", "77a3029517e5c77bf354b154c262f31f139ad128", "2021"), // Sequoia
-            ("CVE-2021-4034", "b2376e58da8cda5fb67872bc1cc0a18717712789", "2021"),  // PwnKit
-            ("CVE-2022-0847", "9d2231c5d6c953e754546441a48822311c6e5a1d", "2022"),  // Dirty Pipe
-            ("CVE-2022-0185", "4fc5be3a13775696d23df91efb41e7c24bc71d12", "2022"),  // CAP_NET_RAW container escape
-            ("CVE-2023-0179", "25b39e6d73229a3e12c03d22f645c198518c6d01", "2023"),  // OverlayFS bug
-            ("CVE-2023-1281", "3e6d93437db25378905dd13435037ad0883940bd", "2023"),  // ptrace vulnerability
+            (
+                "CVE-2021-33909",
+                "77a3029517e5c77bf354b154c262f31f139ad128",
+                "2021",
+            ), // Sequoia
+            (
+                "CVE-2021-4034",
+                "b2376e58da8cda5fb67872bc1cc0a18717712789",
+                "2021",
+            ), // PwnKit
+            (
+                "CVE-2022-0847",
+                "9d2231c5d6c953e754546441a48822311c6e5a1d",
+                "2022",
+            ), // Dirty Pipe
+            (
+                "CVE-2022-0185",
+                "4fc5be3a13775696d23df91efb41e7c24bc71d12",
+                "2022",
+            ), // CAP_NET_RAW container escape
+            (
+                "CVE-2023-0179",
+                "25b39e6d73229a3e12c03d22f645c198518c6d01",
+                "2023",
+            ), // OverlayFS bug
+            (
+                "CVE-2023-1281",
+                "3e6d93437db25378905dd13435037ad0883940bd",
+                "2023",
+            ), // ptrace vulnerability
         ];
 
         // Create the files for each CVE
@@ -633,11 +683,14 @@ mod tests {
             if *cve_id == "CVE-2023-0179" {
                 let message_file = year_dir.join(format!("{cve_id}.message"));
                 let mut file = File::create(&message_file).unwrap();
-                writeln!(file, "This is a custom CVE description from a .message file.").unwrap();
+                writeln!(
+                    file,
+                    "This is a custom CVE description from a .message file."
+                )
+                .unwrap();
                 writeln!(file).unwrap();
                 writeln!(file, "It overrides the commit message for better clarity.").unwrap();
             }
-
 
             // Create a .reference file
             if *cve_id == "CVE-2022-0185" {
@@ -667,10 +720,34 @@ mod tests {
         }
 
         // Test additional file types
-        assert!(cve_root.join("published").join("2021").join("CVE-2021-33909.vulnerable").exists());
-        assert!(cve_root.join("published").join("2022").join("CVE-2022-0847.vulnerable").exists());
-        assert!(cve_root.join("published").join("2023").join("CVE-2023-0179.message").exists());
-        assert!(cve_root.join("published").join("2022").join("CVE-2022-0185.reference").exists());
+        assert!(
+            cve_root
+                .join("published")
+                .join("2021")
+                .join("CVE-2021-33909.vulnerable")
+                .exists()
+        );
+        assert!(
+            cve_root
+                .join("published")
+                .join("2022")
+                .join("CVE-2022-0847.vulnerable")
+                .exists()
+        );
+        assert!(
+            cve_root
+                .join("published")
+                .join("2023")
+                .join("CVE-2023-0179.message")
+                .exists()
+        );
+        assert!(
+            cve_root
+                .join("published")
+                .join("2022")
+                .join("CVE-2022-0185.reference")
+                .exists()
+        );
     }
 
     #[test]

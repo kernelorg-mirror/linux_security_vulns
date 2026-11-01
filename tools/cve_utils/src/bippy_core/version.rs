@@ -262,7 +262,9 @@ fn process_explicit_versions(
     for (version, is_affected) in all_versions {
         // Don't add individual unaffected mainline versions - they'll be added later with range information
         if !is_affected && version_is_mainline(version) {
-            debug!("Skipping individual unaffected mainline version {version} - will be added with range info later");
+            debug!(
+                "Skipping individual unaffected mainline version {version} - will be added with range info later"
+            );
             continue;
         }
 
@@ -414,7 +416,10 @@ fn process_version_gap(
         // Only add intermediate version if its status differs from the default status
         // This prevents adding redundant entries
         if is_default {
-            debug!("Skipping redundant intermediate version {intermediate_version} (matches default status '{}')", config.default_status);
+            debug!(
+                "Skipping redundant intermediate version {intermediate_version} (matches default status '{}')",
+                config.default_status
+            );
         } else {
             add_version_if_new(intermediate_version, status, seen_versions, kernel_versions);
         }
@@ -538,16 +543,19 @@ fn add_pre_affected_unaffected_range(
     seen_versions: &mut HashSet<String>,
     kernel_versions: &mut Vec<VersionRange>,
 ) {
-    let unaffected_key = format!("{DEDUP_KERNEL}:unaffected:0:{}:", entry.vulnerable.version());
+    let unaffected_key = format!(
+        "{DEDUP_KERNEL}:unaffected:0:{}:",
+        entry.vulnerable.version()
+    );
     // First check if we need to process this unaffected range
     if seen_versions.contains(&unaffected_key) {
         return;
     }
 
     // Check if any version before this one is already marked as affected
-    let is_safe_to_mark_unaffected = !affected_mainline_versions
-        .iter()
-        .any(|v| compare_kernel_versions(v, &entry.vulnerable.version()) == std::cmp::Ordering::Less);
+    let is_safe_to_mark_unaffected = !affected_mainline_versions.iter().any(|v| {
+        compare_kernel_versions(v, &entry.vulnerable.version()) == std::cmp::Ordering::Less
+    });
 
     if is_safe_to_mark_unaffected {
         seen_versions.insert(unaffected_key);
@@ -579,7 +587,11 @@ fn add_fixed_unaffected_range(
     };
 
     // Create a unique key for this version
-    let key = format!("{DEDUP_KERNEL}:unaffected:{}::{}", entry.fixed.version(), wildcard);
+    let key = format!(
+        "{DEDUP_KERNEL}:unaffected:{}::{}",
+        entry.fixed.version(),
+        wildcard
+    );
 
     if seen_versions.insert(key) {
         // Add fixed version as unaffected
@@ -798,9 +810,9 @@ mod tests {
     fn test_determine_default_status_with_mainline_cross_version_vulnerability() {
         // When there's a mainline vulnerable version that's different from the fixed version,
         // status should be "affected"
-        let entries = vec![
-            dyad_entry("5.11:e478d6029dca9d8462f426aee0d32896ef64f10f:5.15:11c52d250b34a0862edc29db03fbec23b30db6da"),
-        ];
+        let entries = vec![dyad_entry(
+            "5.11:e478d6029dca9d8462f426aee0d32896ef64f10f:5.15:11c52d250b34a0862edc29db03fbec23b30db6da",
+        )];
         assert_eq!(determine_default_status(&entries), "affected");
     }
 
@@ -808,18 +820,18 @@ mod tests {
     fn test_determine_default_status_with_same_version_fix() {
         // When a vulnerability is both introduced and fixed in the same version,
         // status should be "unaffected" because no actually released version was affected
-        let entries = vec![
-            dyad_entry("6.1:7bd7ad3c310cd6766f170927381eea0aa6f46c69:6.1:1a0398915d2243fc14be6506a6d226e0593a1c33"),
-        ];
+        let entries = vec![dyad_entry(
+            "6.1:7bd7ad3c310cd6766f170927381eea0aa6f46c69:6.1:1a0398915d2243fc14be6506a6d226e0593a1c33",
+        )];
         assert_eq!(determine_default_status(&entries), "unaffected");
     }
 
     #[test]
     fn test_determine_default_status_with_stable_version_fix() {
         // When only stable versions are affected and fixed, status should be "unaffected"
-        let entries = vec![
-            dyad_entry("5.15.1:569fd073a954616c8be5a26f37678a1311cc7f91:5.15.2:5dbe126056fb5a1a4de6970ca86e2e567157033a"),
-        ];
+        let entries = vec![dyad_entry(
+            "5.15.1:569fd073a954616c8be5a26f37678a1311cc7f91:5.15.2:5dbe126056fb5a1a4de6970ca86e2e567157033a",
+        )];
         assert_eq!(determine_default_status(&entries), "unaffected");
     }
 
@@ -827,22 +839,30 @@ mod tests {
     fn test_determine_default_status_with_mixed_entries() {
         // Test with multiple entries, one with vulnerable_version = 0
         let entries = vec![
-            dyad_entry("5.11:e478d6029dca9d8462f426aee0d32896ef64f10f:5.15:11c52d250b34a0862edc29db03fbec23b30db6da"),
+            dyad_entry(
+                "5.11:e478d6029dca9d8462f426aee0d32896ef64f10f:5.15:11c52d250b34a0862edc29db03fbec23b30db6da",
+            ),
             dyad_entry("0:0:6.1:1a0398915d2243fc14be6506a6d226e0593a1c33"),
         ];
         assert_eq!(determine_default_status(&entries), "affected");
 
         // Test with multiple entries, mix of same-version fixes and different-version fixes
         let entries = vec![
-            dyad_entry("5.15.1:569fd073a954616c8be5a26f37678a1311cc7f91:5.15.2:5dbe126056fb5a1a4de6970ca86e2e567157033a"),
-            dyad_entry("6.1:7bd7ad3c310cd6766f170927381eea0aa6f46c69:6.1:1a0398915d2243fc14be6506a6d226e0593a1c33"),
+            dyad_entry(
+                "5.15.1:569fd073a954616c8be5a26f37678a1311cc7f91:5.15.2:5dbe126056fb5a1a4de6970ca86e2e567157033a",
+            ),
+            dyad_entry(
+                "6.1:7bd7ad3c310cd6766f170927381eea0aa6f46c69:6.1:1a0398915d2243fc14be6506a6d226e0593a1c33",
+            ),
         ];
         assert_eq!(determine_default_status(&entries), "unaffected");
 
         // Mainline vulnerability that's not fixed should make the default status "affected"
         let entries = vec![
             // Just use this entry which we know works and has a mainline vulnerability
-            dyad_entry("5.11:e478d6029dca9d8462f426aee0d32896ef64f10f:5.15:11c52d250b34a0862edc29db03fbec23b30db6da"),
+            dyad_entry(
+                "5.11:e478d6029dca9d8462f426aee0d32896ef64f10f:5.15:11c52d250b34a0862edc29db03fbec23b30db6da",
+            ),
         ];
         assert_eq!(determine_default_status(&entries), "affected");
     }
@@ -850,9 +870,9 @@ mod tests {
     #[test]
     fn test_generate_cpe_ranges_with_cross_version_vulnerability() {
         // Test with a single entry for a cross-version vulnerability
-        let entries = vec![
-            dyad_entry("5.15:11c52d250b34a0862edc29db03fbec23b30db6da:5.16:2b503c8598d1b232e7fc7526bce9326d92331541"),
-        ];
+        let entries = vec![dyad_entry(
+            "5.15:11c52d250b34a0862edc29db03fbec23b30db6da:5.16:2b503c8598d1b232e7fc7526bce9326d92331541",
+        )];
 
         let cpe_nodes = generate_cpe_ranges(&entries);
 
@@ -914,9 +934,9 @@ mod tests {
     #[test]
     fn test_generate_cpe_ranges_with_same_version_vulnerability() {
         // Test with a vulnerability that's fixed in the same version
-        let entries = vec![
-            dyad_entry("6.1:7bd7ad3c310cd6766f170927381eea0aa6f46c69:6.1:1a0398915d2243fc14be6506a6d226e0593a1c33"),
-        ];
+        let entries = vec![dyad_entry(
+            "6.1:7bd7ad3c310cd6766f170927381eea0aa6f46c69:6.1:1a0398915d2243fc14be6506a6d226e0593a1c33",
+        )];
 
         let cpe_nodes = generate_cpe_ranges(&entries);
 
@@ -928,9 +948,9 @@ mod tests {
     #[test]
     fn test_generate_git_ranges_basic() {
         // Test with a single entry
-        let entries = vec![
-            dyad_entry("5.15:11c52d250b34a0862edc29db03fbec23b30db6da:5.16:2b503c8598d1b232e7fc7526bce9326d92331541"),
-        ];
+        let entries = vec![dyad_entry(
+            "5.15:11c52d250b34a0862edc29db03fbec23b30db6da:5.16:2b503c8598d1b232e7fc7526bce9326d92331541",
+        )];
 
         let git_versions = generate_git_ranges(&entries);
 
@@ -998,9 +1018,9 @@ mod tests {
         // so we're only testing core aspects rather than full functionality
 
         // Test with a single entry and default status "unaffected"
-        let entries = vec![
-            dyad_entry("5.15:11c52d250b34a0862edc29db03fbec23b30db6da:5.16:2b503c8598d1b232e7fc7526bce9326d92331541"),
-        ];
+        let entries = vec![dyad_entry(
+            "5.15:11c52d250b34a0862edc29db03fbec23b30db6da:5.16:2b503c8598d1b232e7fc7526bce9326d92331541",
+        )];
 
         let kernel_versions = generate_version_ranges(&entries, "unaffected").kernel_versions;
 
@@ -1017,15 +1037,33 @@ mod tests {
     fn test_generate_git_ranges_complex_multiple_fixes() {
         // This is the dyad output for 9f6ad5d533d1c71e51bdd06a5712c4fbc8768dfa
         let entries = vec![
-            dyad_entry("4.19.257:2035c770bfdbcc82bd52e05871a7c82db9529e0f:4.19.312:6bdf4e6dfb60cbb6121ccf027d97ed2ec97c0bcb"),
-            dyad_entry("4.19.312:a217715338fd48f72114725aa7a40e484a781ca7:4.19.312:832580af82ace363205039a8e7c4ef04552ccc1a"),
-            dyad_entry("5.4.212:13b2856037a651ba3ab4a8b25ecab3e791926da3:5.4.274:2ea7077748e5d7cc64f1c31342c802fe66ea7426"),
-            dyad_entry("5.4.274:b40877b8562c5720d0a7fce20729f56b75a3dede:5.4.274:861021710bba9dfa0749a3c209a6c1773208b1f1"),
-            dyad_entry("5.10.140:6858933131d0dadac071c4d33335a9ea4b8e76cf:5.10.173:c79a924ed6afac1708dfd370ba66bcf6a852ced6"),
-            dyad_entry("5.15.64:0455bef69028c65065f16bb04635591b2374249b:5.15.100:3e7d0968203d668af6036b9f9199c7b62c8a3581"),
-            dyad_entry("6.0:c490a0b5a4f36da3918181a8acdc6991d967c5f3:6.1.18:4be26d553a3f1d4f54f25353d1496c562002126d"),
-            dyad_entry("6.0:c490a0b5a4f36da3918181a8acdc6991d967c5f3:6.2.5:258809bf22bf71d53247856f374f2b1d055f2fd4"),
-            dyad_entry("6.0:c490a0b5a4f36da3918181a8acdc6991d967c5f3:6.3:9f6ad5d533d1c71e51bdd06a5712c4fbc8768dfa"),
+            dyad_entry(
+                "4.19.257:2035c770bfdbcc82bd52e05871a7c82db9529e0f:4.19.312:6bdf4e6dfb60cbb6121ccf027d97ed2ec97c0bcb",
+            ),
+            dyad_entry(
+                "4.19.312:a217715338fd48f72114725aa7a40e484a781ca7:4.19.312:832580af82ace363205039a8e7c4ef04552ccc1a",
+            ),
+            dyad_entry(
+                "5.4.212:13b2856037a651ba3ab4a8b25ecab3e791926da3:5.4.274:2ea7077748e5d7cc64f1c31342c802fe66ea7426",
+            ),
+            dyad_entry(
+                "5.4.274:b40877b8562c5720d0a7fce20729f56b75a3dede:5.4.274:861021710bba9dfa0749a3c209a6c1773208b1f1",
+            ),
+            dyad_entry(
+                "5.10.140:6858933131d0dadac071c4d33335a9ea4b8e76cf:5.10.173:c79a924ed6afac1708dfd370ba66bcf6a852ced6",
+            ),
+            dyad_entry(
+                "5.15.64:0455bef69028c65065f16bb04635591b2374249b:5.15.100:3e7d0968203d668af6036b9f9199c7b62c8a3581",
+            ),
+            dyad_entry(
+                "6.0:c490a0b5a4f36da3918181a8acdc6991d967c5f3:6.1.18:4be26d553a3f1d4f54f25353d1496c562002126d",
+            ),
+            dyad_entry(
+                "6.0:c490a0b5a4f36da3918181a8acdc6991d967c5f3:6.2.5:258809bf22bf71d53247856f374f2b1d055f2fd4",
+            ),
+            dyad_entry(
+                "6.0:c490a0b5a4f36da3918181a8acdc6991d967c5f3:6.3:9f6ad5d533d1c71e51bdd06a5712c4fbc8768dfa",
+            ),
             dyad_entry("4.9.327:18e28817cb516b39de6281f6db9b0618b2cc7b42:0:0"),
             dyad_entry("4.14.292:adf0112d9b8acb03485624220b4934f69bf13369:0:0"),
             dyad_entry("5.19.6:9be7fa7ead18a48940df7b59d993bbc8b9055c15:0:0"),
@@ -1064,8 +1102,12 @@ mod tests {
     #[test]
     fn test_generate_cpe_ranges_complex_multiple_fixes() {
         let entries = vec![
-            dyad_entry("4.19.257:2035c770bfdbcc82bd52e05871a7c82db9529e0f:4.19.312:6bdf4e6dfb60cbb6121ccf027d97ed2ec97c0bcb"),
-            dyad_entry("6.0:c490a0b5a4f36da3918181a8acdc6991d967c5f3:6.3:9f6ad5d533d1c71e51bdd06a5712c4fbc8768dfa"),
+            dyad_entry(
+                "4.19.257:2035c770bfdbcc82bd52e05871a7c82db9529e0f:4.19.312:6bdf4e6dfb60cbb6121ccf027d97ed2ec97c0bcb",
+            ),
+            dyad_entry(
+                "6.0:c490a0b5a4f36da3918181a8acdc6991d967c5f3:6.3:9f6ad5d533d1c71e51bdd06a5712c4fbc8768dfa",
+            ),
             dyad_entry("4.9.327:18e28817cb516b39de6281f6db9b0618b2cc7b42:0:0"),
         ];
 

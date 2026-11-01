@@ -8,9 +8,9 @@
 //
 //
 
-use crate::common;
 use crate::Kernel;
-use anyhow::{anyhow, Result};
+use crate::common;
+use anyhow::{Result, anyhow};
 use log::{debug, error};
 use rusqlite::fallible_iterator::FallibleIterator;
 use rusqlite::{Connection, OpenFlags, ToSql};
@@ -230,7 +230,9 @@ impl Verhaal {
             if let Ok(k) = Kernel::from_id(git_sha) {
                 debug!("kernel = {k:?}");
             } else {
-                debug!("{git_sha} is not a valid kernel yet, so maybe this is not in the mainline yet?");
+                debug!(
+                    "{git_sha} is not a valid kernel yet, so maybe this is not in the mainline yet?"
+                );
                 // This commit could just be in Linus's tree, but NOT in a release kernel yet, so
                 // let's dig and see if this is in a stable release (this happens at times)
                 let found = self.found_in(git_sha, &[])?;
@@ -243,7 +245,7 @@ impl Verhaal {
                 debug!("no kernels were found for this git id.");
                 return Err(anyhow!("No fixes for {git_sha} were found"));
             }
-            return Err(anyhow!("No fixes for {git_sha} were found"))
+            return Err(anyhow!("No fixes for {git_sha} were found"));
         }
 
         // Sort the list to be deterministic
@@ -333,11 +335,12 @@ impl Verhaal {
                     revert_id: None,
                     revert_release: None,
                 })
-            }) {
-                for entry in mainline_rows.flatten() {
-                    entries.push(entry);
-                }
+            })
+        {
+            for entry in mainline_rows.flatten() {
+                entries.push(entry);
             }
+        }
 
         Ok(entries)
     }
@@ -381,7 +384,10 @@ impl Verhaal {
             if let Some(ref revert_target) = entry.reverts
                 && self.reverts_stable_commit(revert_target)
             {
-                debug!("\t\tfound_in: skipping {} as it reverts a stable commit", entry.id);
+                debug!(
+                    "\t\tfound_in: skipping {} as it reverts a stable commit",
+                    entry.id
+                );
                 continue;
             }
 
@@ -398,7 +404,9 @@ impl Verhaal {
                 // Non-reverted backport - add to kernels list.  The row came
                 // out of the commits table, so the id and release are already
                 // the exact values a validating lookup would return.
-                result.kernels.push(Kernel::from_id_no_validate(&entry.id, &entry.release));
+                result
+                    .kernels
+                    .push(Kernel::from_id_no_validate(&entry.id, &entry.release));
             }
         }
 
@@ -408,7 +416,10 @@ impl Verhaal {
 
         // Sort for deterministic results
         result.kernels.sort();
-        debug!("\t\tfound_in: kernels={:?}, reverted_pairs={:?}", result.kernels, result.reverted_pairs);
+        debug!(
+            "\t\tfound_in: kernels={:?}, reverted_pairs={:?}",
+            result.kernels, result.reverted_pairs
+        );
 
         Ok(result)
     }
@@ -441,7 +452,6 @@ impl Verhaal {
     fn verhaal_database_file() -> &'static String {
         VERHAAL_DB.get_or_init(Self::lookup_verhaal_database_file)
     }
-
 }
 
 #[cfg(test)]
@@ -517,7 +527,10 @@ mod tests {
         let found = result.unwrap();
 
         // Should have some non-reverted backports (6.5.5, 6.6, etc.)
-        assert!(!found.kernels.is_empty(), "Should find non-reverted backports");
+        assert!(
+            !found.kernels.is_empty(),
+            "Should find non-reverted backports"
+        );
 
         // Should find at least 2 revert-based fixes (6.1 and 5.15)
         assert!(

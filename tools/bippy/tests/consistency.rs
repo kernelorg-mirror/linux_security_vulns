@@ -50,7 +50,8 @@ fn json_semver_ranges(products: Option<&Vec<Value>>) -> HashSet<(String, String)
     };
     for p in prods {
         for v in p["versions"].as_array().unwrap_or(&Vec::new()) {
-            if v["versionType"].as_str() == Some("semver") && v["status"].as_str() == Some("affected")
+            if v["versionType"].as_str() == Some("semver")
+                && v["status"].as_str() == Some("affected")
             {
                 let start = v["version"].as_str().unwrap_or("");
                 let lt = v["lessThan"].as_str().unwrap_or("");
@@ -173,7 +174,9 @@ fn check_consistency(json_path: &Path) -> ConsistencyIssues {
         if fixed_branches.contains(&branch) {
             continue;
         }
-        let has_range = all_affected_ranges.iter().any(|(s, _)| *s == e.vulnerable.version());
+        let has_range = all_affected_ranges
+            .iter()
+            .any(|(s, _)| *s == e.vulnerable.version());
         if !has_range {
             issues.unfixed_branch += 1;
         }
@@ -246,8 +249,14 @@ fn test_cve_consistency() {
 
     assert_eq!(git, 0, "git range mismatches (of {total} CVEs)");
     assert_eq!(cpe, 0, "CPE range mismatches (of {total} CVEs)");
-    assert_eq!(unfixed, 0, "unfixed-branch mismatches (of {total} CVEs, {with_issues} CVEs affected)");
-    assert_eq!(intro, 0, "stable-intro mismatches (of {total} CVEs, {with_issues} CVEs affected)");
+    assert_eq!(
+        unfixed, 0,
+        "unfixed-branch mismatches (of {total} CVEs, {with_issues} CVEs affected)"
+    );
+    assert_eq!(
+        intro, 0,
+        "stable-intro mismatches (of {total} CVEs, {with_issues} CVEs affected)"
+    );
 }
 
 #[derive(Default)]
@@ -287,12 +296,18 @@ fn get_fixes_from_semver(cna: &Value) -> HashSet<String> {
             let vt = v["versionType"].as_str().unwrap_or("");
             let status = v["status"].as_str().unwrap_or("");
             let ver = v["version"].as_str().unwrap_or("0");
-            if (vt == "semver" || vt == "original_commit_for_fix") && status == "unaffected" && ver != "0" {
+            if (vt == "semver" || vt == "original_commit_for_fix")
+                && status == "unaffected"
+                && ver != "0"
+            {
                 fixes.insert(ver.to_string());
             } else if vt == "semver" && status == "affected" && ds == "unaffected" {
                 let lt = v["lessThan"].as_str().unwrap_or("");
                 // Real fix has same component count as start; branch ceilings have fewer
-                if !lt.is_empty() && !ver.is_empty() && lt.matches('.').count() >= ver.matches('.').count() {
+                if !lt.is_empty()
+                    && !ver.is_empty()
+                    && lt.matches('.').count() >= ver.matches('.').count()
+                {
                     fixes.insert(lt.to_string());
                 }
             }
@@ -406,8 +421,14 @@ fn test_cross_product_consistency() {
     let intro = intro_mismatch.load(Ordering::Relaxed);
     let with_issues = cves_with_issues.load(Ordering::Relaxed);
 
-    assert_eq!(fix, 0, "fix-mismatch: semver vs CPE fix versions disagree (of {total} CVEs, {with_issues} affected)");
-    assert_eq!(intro, 0, "intro-mismatch: semver vs CPE intro versions disagree (of {total} CVEs, {with_issues} affected)");
+    assert_eq!(
+        fix, 0,
+        "fix-mismatch: semver vs CPE fix versions disagree (of {total} CVEs, {with_issues} affected)"
+    );
+    assert_eq!(
+        intro, 0,
+        "intro-mismatch: semver vs CPE intro versions disagree (of {total} CVEs, {with_issues} affected)"
+    );
 }
 
 // ─── unit tests for the range extraction helpers ────────────────────────────
@@ -415,7 +436,7 @@ fn test_cross_product_consistency() {
 #[cfg(test)]
 mod range_tests {
     use super::{
-        dyad_cpe_ranges, dyad_git_ranges, json_git_ranges, json_semver_ranges, FIRST_LINUX_COMMIT,
+        FIRST_LINUX_COMMIT, dyad_cpe_ranges, dyad_git_ranges, json_git_ranges, json_semver_ranges,
     };
     use cve_utils::dyad::DyadEntry;
     use serde_json::json;
@@ -464,9 +485,9 @@ mod range_tests {
     #[test]
     fn dyad_git_ranges_start_at_the_first_commit_when_introduction_is_unknown() {
         let e = entries(&[
-            "0:0:6.1.5:fixsha",             // introduced before git history
-            "6.0:vulnsha:6.1.5:otherfix",   // ordinary pair
-            "6.0:unfixedsha:0:0",           // still unfixed, no range to state
+            "0:0:6.1.5:fixsha",           // introduced before git history
+            "6.0:vulnsha:6.1.5:otherfix", // ordinary pair
+            "6.0:unfixedsha:0:0",         // still unfixed, no range to state
         ]);
         let ranges = dyad_git_ranges(&e);
         assert_eq!(ranges.len(), 2);
@@ -477,9 +498,9 @@ mod range_tests {
     #[test]
     fn dyad_cpe_ranges_skip_unfixed_and_same_version_pairs() {
         let e = entries(&[
-            "6.0:vulnsha:6.1.5:fixsha",       // ordinary pair
-            "6.1.5:samea:6.1.5:sameb",        // introduced and fixed in one release
-            "6.0:unfixedsha:0:0",             // still unfixed
+            "6.0:vulnsha:6.1.5:fixsha", // ordinary pair
+            "6.1.5:samea:6.1.5:sameb",  // introduced and fixed in one release
+            "6.0:unfixedsha:0:0",       // still unfixed
         ]);
         let ranges = dyad_cpe_ranges(&e);
         assert_eq!(ranges.len(), 1);

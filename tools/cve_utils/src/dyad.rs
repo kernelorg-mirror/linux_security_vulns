@@ -133,11 +133,11 @@ impl DyadEntry {
 #[cfg(test)]
 mod tests {
     use crate::dyad::DyadEntry;
-//    use super::*;
-//    use cve_utils::version_utils::{version_is_mainline, version_is_queue, version_is_rc};
-//    use std::fs::File;
-//    use std::io::Write;
-//    use tempfile::tempdir;
+    //    use super::*;
+    //    use cve_utils::version_utils::{version_is_mainline, version_is_queue, version_is_rc};
+    //    use std::fs::File;
+    //    use std::io::Write;
+    //    use tempfile::tempdir;
 
     #[test]
     fn test_dyad_entry_parsing() {
@@ -156,8 +156,7 @@ mod tests {
         assert!(entry.is_cross_version());
 
         // Test with a vulnerability that isn't fixed
-        let entry =
-            DyadEntry::new("5.15:11c52d250b34a0862edc29db03fbec23b30db6da:0:0").unwrap();
+        let entry = DyadEntry::new("5.15:11c52d250b34a0862edc29db03fbec23b30db6da:0:0").unwrap();
         assert_eq!(entry.vulnerable.version(), "5.15");
         assert_eq!(
             entry.vulnerable.git_id(),
@@ -169,8 +168,7 @@ mod tests {
         assert!(!entry.is_fixed());
 
         // Test with an unknown introduction point
-        let entry =
-            DyadEntry::new("0:0:5.16:2b503c8598d1b232e7fc7526bce9326d92331541").unwrap();
+        let entry = DyadEntry::new("0:0:5.16:2b503c8598d1b232e7fc7526bce9326d92331541").unwrap();
         assert!(entry.vulnerable.is_empty());
         assert_eq!(entry.vulnerable.version(), "0");
         assert_eq!(entry.vulnerable.git_id(), "0");
@@ -211,20 +209,16 @@ mod tests {
 
     #[test]
     fn test_new_no_validate_with_zero_entries() {
-        let entry = DyadEntry::new_no_validate(
-            "0:0:6.8:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        )
-        .unwrap();
+        let entry =
+            DyadEntry::new_no_validate("0:0:6.8:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").unwrap();
         assert!(entry.vulnerable.is_empty());
         assert_eq!(entry.fixed.version(), "6.8");
     }
 
     #[test]
     fn test_new_no_validate_unfixed() {
-        let entry = DyadEntry::new_no_validate(
-            "6.8:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:0:0",
-        )
-        .unwrap();
+        let entry =
+            DyadEntry::new_no_validate("6.8:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:0:0").unwrap();
         assert_eq!(entry.vulnerable.version(), "6.8");
         assert!(entry.fixed.is_empty());
     }

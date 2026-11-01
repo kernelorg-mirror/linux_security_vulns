@@ -316,8 +316,8 @@ pub fn generate_mbox(params: &MboxParams) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dyad::DyadEntry;
     use crate::Kernel;
+    use crate::dyad::DyadEntry;
 
     fn create_test_kernel(_version: &str, git_id: &str) -> Kernel {
         // In tests, we don't have real git commit IDs to look up,
@@ -443,10 +443,16 @@ mod tests {
         assert!(files_section.contains("drivers/net/ethernet/test.c"));
         assert!(files_section.contains("include/linux/test.h"));
 
-        assert!(url_section
-            .contains("https://git.kernel.org/stable/c/11c52d250b34a0862edc29db03fbec23b30db6da"));
-        assert!(url_section
-            .contains("https://git.kernel.org/stable/c/22c52d250b34a0862edc29db03fbec23b30db6db"));
+        assert!(
+            url_section.contains(
+                "https://git.kernel.org/stable/c/11c52d250b34a0862edc29db03fbec23b30db6da"
+            )
+        );
+        assert!(
+            url_section.contains(
+                "https://git.kernel.org/stable/c/22c52d250b34a0862edc29db03fbec23b30db6db"
+            )
+        );
     }
 
     #[test]

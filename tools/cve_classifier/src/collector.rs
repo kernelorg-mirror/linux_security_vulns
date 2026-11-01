@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0
 // (c) 2025, Sasha Levin <sashal@kernel.org>
 
+use chrono::{DateTime, Utc};
+use indicatif::{ProgressBar, ProgressStyle};
+use log::{debug, error, info, warn};
+use rayon::prelude::*;
+use regex::Regex;
+use sha2::{Digest, Sha256};
 use std::collections::HashSet;
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use log::{info, debug, warn, error};
-use chrono::{DateTime, Utc};
-use sha2::{Sha256, Digest};
-use indicatif::{ProgressBar, ProgressStyle};
-use regex::Regex;
-use rayon::prelude::*;
 use std::sync::Arc;
 use walkdir::WalkDir;
 
@@ -50,7 +50,7 @@ impl CVEDataCollector {
                     let stderr = String::from_utf8_lossy(&output.stderr);
                     return Err(format!("Not a valid git repository: {stderr}"));
                 }
-            },
+            }
             Err(e) => return Err(format!("Failed to verify git repository: {e}")),
         }
 
@@ -86,8 +86,7 @@ impl CVEDataCollector {
                 let path = entry.path();
 
                 // Filter for .sha1 files
-                if path.is_file() &&
-                   path.extension().is_some_and(|ext| ext == "sha1") {
+                if path.is_file() && path.extension().is_some_and(|ext| ext == "sha1") {
                     // Read the file content
                     if let Ok(content) = std::fs::read_to_string(path) {
                         // Process each line separately as some .sha1 files contain multiple commits
@@ -108,7 +107,6 @@ impl CVEDataCollector {
         info!("Total CVE fix commits found: {}", cve_fixes.len());
         cve_fixes
     }
-
 
     pub fn process_cve_commit(&self, commit_sha: &str) -> Option<CommitFeatures> {
         let mut features = self.get_commit_features(commit_sha)?;
@@ -144,7 +142,9 @@ impl CVEDataCollector {
             features.was_selected = Some(true);
             let upstream_sha_clone = upstream_sha.clone();
             features.upstream_sha = Some(upstream_sha);
-            debug!("Reclassified commit {commit_sha} as a backported CVE from {upstream_sha_clone}");
+            debug!(
+                "Reclassified commit {commit_sha} as a backported CVE from {upstream_sha_clone}"
+            );
             return Some(features);
         }
 
@@ -160,7 +160,7 @@ impl CVEDataCollector {
             r"(?:commit|upstream commit|upstream|upstream:)\s+([a-f0-9]{40})",
             r"\[\s*(?:Upstream|UPSTREAM)(?:\s+commit)?\s+([a-f0-9]{40})",
             r"cherry picked from commit ([a-f0-9]{40})",
-            r"backport of commit ([a-f0-9]{40})"
+            r"backport of commit ([a-f0-9]{40})",
         ];
 
         // Try each pattern
@@ -183,7 +183,8 @@ impl CVEDataCollector {
         }
 
         // Try to get the commit message
-        let Some(message) = self.safe_git_command(&["log", "-1", "--pretty=format:%B", commit_sha]) else {
+        let Some(message) = self.safe_git_command(&["log", "-1", "--pretty=format:%B", commit_sha])
+        else {
             warn!("Failed to retrieve commit message for SHA: {commit_sha}");
             return None;
         };
@@ -192,7 +193,9 @@ impl CVEDataCollector {
             .safe_git_command(&["log", "-1", "--pretty=format:%an", commit_sha])
             .unwrap_or_else(|| "Unknown".to_string());
 
-        let Some(date_str) = self.safe_git_command(&["log", "-1", "--pretty=format:%aI", commit_sha]) else {
+        let Some(date_str) =
+            self.safe_git_command(&["log", "-1", "--pretty=format:%aI", commit_sha])
+        else {
             warn!("Failed to retrieve commit date for SHA: {commit_sha}");
             return None;
         };
@@ -201,13 +204,13 @@ impl CVEDataCollector {
         let datetime = DateTime::parse_from_rfc3339(&date_str)
             .map_or_else(|_| Utc::now(), |dt| dt.with_timezone(&Utc));
 
-        let diff_text = self.safe_git_command(
-            &["show", "-U20", "--format=", commit_sha]
-        ).unwrap_or_default();
+        let diff_text = self
+            .safe_git_command(&["show", "-U20", "--format=", commit_sha])
+            .unwrap_or_default();
 
-        let files_output = self.safe_git_command(
-            &["show", "--name-only", "--format=", commit_sha]
-        ).unwrap_or_default();
+        let files_output = self
+            .safe_git_command(&["show", "--name-only", "--format=", commit_sha])
+            .unwrap_or_default();
 
         let files_changed: Vec<String> = files_output
             .lines()
@@ -230,8 +233,7 @@ impl CVEDataCollector {
     // Execute git command with safety checks
     pub fn safe_git_command(&self, args: &[&str]) -> Option<String> {
         let mut cmd = Command::new("git");
-        cmd.current_dir(&self.kernel_repo_path)
-            .args(args);
+        cmd.current_dir(&self.kernel_repo_path).args(args);
 
         match cmd.output() {
             Ok(output) => {
@@ -248,7 +250,7 @@ impl CVEDataCollector {
                     warn!("Git command failed: {} ({})", args.join(" "), stderr);
                     None
                 }
-            },
+            }
             Err(e) => {
                 error!("Error executing git command {}: {}", args.join(" "), e);
                 None
@@ -280,12 +282,7 @@ impl CVEDataCollector {
 
         // Get non-merge commits in the date range between merge-base and branch tip
         let range = format!("{merge_base}..{branch_tip}");
-        let cmd = vec![
-            "rev-list", "--no-merges",
-            since_str,
-            until_str,
-            &range
-        ];
+        let cmd = vec!["rev-list", "--no-merges", since_str, until_str, &range];
 
         self.safe_git_command(&cmd).map_or_else(
             || {
@@ -304,9 +301,7 @@ impl CVEDataCollector {
 
     fn get_commit_message_hash(&self, commit_sha: &str) -> Option<(String, String)> {
         // Get the raw message
-        let message = self.safe_git_command(
-            &["log", "-1", "--pretty=format:%B", commit_sha]
-        )?;
+        let message = self.safe_git_command(&["log", "-1", "--pretty=format:%B", commit_sha])?;
 
         // Split to get just the subject line for display
         let lines: Vec<&str> = message.lines().collect();
@@ -317,7 +312,6 @@ impl CVEDataCollector {
 
         Some((hash, subject))
     }
-
 
     // Initialize rayon thread pool with specified number of workers
     fn setup_thread_pool(max_workers: usize) {
@@ -350,18 +344,20 @@ impl CVEDataCollector {
             Some(limit) if limit < self.cve_commits.len() => {
                 info!("Limiting CVE commits to {limit} for testing");
                 self.cve_commits.iter().take(limit).cloned().collect()
-            },
-            _ => self.cve_commits.iter().cloned().collect()
+            }
+            _ => self.cve_commits.iter().cloned().collect(),
         }
     }
 
     // Pre-process CVE commits to identify backports
     fn preprocess_cve_commits(&self, cve_list: &[String]) -> Vec<(String, Option<String>)> {
         info!("Pre-processing CVE commits to identify backports...");
-        cve_list.par_iter()
+        cve_list
+            .par_iter()
             .map(|sha| {
                 // Try to get the commit message to check if this is a backport
-                if let Some(message) = self.safe_git_command(&["log", "-1", "--pretty=format:%B", sha])
+                if let Some(message) =
+                    self.safe_git_command(&["log", "-1", "--pretty=format:%B", sha])
                     && let Some(upstream_sha) = Self::extract_upstream_commit(&message)
                 {
                     // This is a backport, return the SHA and upstream SHA
@@ -376,7 +372,7 @@ impl CVEDataCollector {
     // Filter out duplicate backports based on upstream SHA
     fn filter_duplicate_backports(
         cve_commit_info: Vec<(String, Option<String>)>,
-        seen_upstream_shas: &mut HashSet<String>
+        seen_upstream_shas: &mut HashSet<String>,
     ) -> Vec<String> {
         let mut shas_to_process = Vec::new();
 
@@ -401,15 +397,20 @@ impl CVEDataCollector {
     fn process_cve_commits(&self, shas_to_process: &[String]) -> Vec<CommitFeatures> {
         // Progress bar
         let pb = ProgressBar::new(shas_to_process.len() as u64);
-        pb.set_style(ProgressStyle::default_bar()
-            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})")
-            .unwrap());
+        pb.set_style(
+            ProgressStyle::default_bar()
+                .template(
+                    "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})",
+                )
+                .unwrap(),
+        );
 
         // Use progress bar that is thread-safe for parallel operations
         let pb = Arc::new(pb);
 
         // Collect and process commit features in parallel
-        let processed_commits: Vec<CommitFeatures> = shas_to_process.par_iter()
+        let processed_commits: Vec<CommitFeatures> = shas_to_process
+            .par_iter()
             .filter_map(|sha| {
                 let pb_clone = Arc::clone(&pb);
                 let features = self.process_cve_commit(sha);
@@ -430,7 +431,8 @@ impl CVEDataCollector {
         if let Some(refs_output) = self.safe_git_command(&list_refs_cmd) {
             for line in refs_output.lines() {
                 // Look for linux- branches in any remote (origin, stable, etc.)
-                if line.contains(" refs/remotes/") && line.contains("/linux-")
+                if line.contains(" refs/remotes/")
+                    && line.contains("/linux-")
                     && let Some(branch_name) = line.split_whitespace().nth(1)
                 {
                     // Extract branch name from the full ref path
@@ -445,7 +447,12 @@ impl CVEDataCollector {
     }
 
     // Collect non-CVE commits from branches
-    fn collect_non_cve_commits(&self, linux_branches: &[String], oldest_date: &str, newest_date_str: &str) -> Vec<String> {
+    fn collect_non_cve_commits(
+        &self,
+        linux_branches: &[String],
+        oldest_date: &str,
+        newest_date_str: &str,
+    ) -> Vec<String> {
         // Process each branch to collect non-CVE commits
         let since_str = format!("--since={oldest_date}");
         let until_str = format!("--until={newest_date_str}");
@@ -457,7 +464,8 @@ impl CVEDataCollector {
             .unwrap());
 
         // Process branches in parallel
-        let branch_results: Vec<Vec<String>> = linux_branches.par_iter()
+        let branch_results: Vec<Vec<String>> = linux_branches
+            .par_iter()
             .map(|branch| {
                 let pb_clone = Arc::clone(&branch_pb);
                 let result = self.process_branch(branch, &since_str, &until_str);
@@ -474,7 +482,10 @@ impl CVEDataCollector {
             all_branch_shas.extend(shas);
         }
 
-        info!("Found {} total commits across all linux- branches", all_branch_shas.len());
+        info!(
+            "Found {} total commits across all linux- branches",
+            all_branch_shas.len()
+        );
         all_branch_shas
     }
 
@@ -489,7 +500,8 @@ impl CVEDataCollector {
 
         // Add upstream SHA extraction to commit_hash_results
         // Format: (SHA, message hash, subject, is_backport, upstream_sha)
-        let commit_info_results: Vec<CommitInfoResult> = non_cve_shas.par_iter()
+        let commit_info_results: Vec<CommitInfoResult> = non_cve_shas
+            .par_iter()
             .map(|sha| {
                 let hash_result = self.get_commit_message_hash(sha);
 
@@ -514,7 +526,7 @@ impl CVEDataCollector {
     // Deduplicate non-CVE commits based on various criteria
     fn deduplicate_non_cve_commits(
         commit_info_results: Vec<CommitInfoResult>,
-        seen_upstream_shas: &mut HashSet<String>
+        seen_upstream_shas: &mut HashSet<String>,
     ) -> (Vec<String>, Vec<String>, usize) {
         // Now perform deduplication sequentially based on upstream SHAs
         info!("Filtering duplicate commits by upstream SHA...");
@@ -545,14 +557,12 @@ impl CVEDataCollector {
                     }
 
                     true // It's a backport, but not of a CVE commit
-                },
+                }
                 None => false, // Not a backport
             };
 
             // Only check message hash and subject deduplication for non-backported commits
-            if !has_upstream_sha
-                && let Some((hash, subject)) = hash_opt
-            {
+            if !has_upstream_sha && let Some((hash, subject)) = hash_opt {
                 // Check for duplicate message hash
                 if seen_messages.contains(&hash) {
                     continue;
@@ -579,7 +589,10 @@ impl CVEDataCollector {
             return Vec::new();
         }
 
-        info!("Processing {} backported CVE commits", backported_shas.len());
+        info!(
+            "Processing {} backported CVE commits",
+            backported_shas.len()
+        );
         let backport_pb = Arc::new(ProgressBar::new(backported_shas.len() as u64));
         backport_pb.set_style(ProgressStyle::default_bar()
             .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta}) - Processing")
@@ -587,7 +600,8 @@ impl CVEDataCollector {
         backport_pb.set_message("Processing backported CVE commits");
 
         // Process backported CVE commits in parallel
-        let backported_cve_commits: Vec<CommitFeatures> = backported_shas.par_iter()
+        let backported_cve_commits: Vec<CommitFeatures> = backported_shas
+            .par_iter()
             .filter_map(|sha| {
                 let pb_clone = Arc::clone(&backport_pb);
                 let features = self.process_cve_commit(sha);
@@ -613,7 +627,8 @@ impl CVEDataCollector {
         let pb = Arc::new(pb);
 
         // Collect and process commit features in parallel
-        let non_cve_commits: Vec<CommitFeatures> = non_cve_list.par_iter()
+        let non_cve_commits: Vec<CommitFeatures> = non_cve_list
+            .par_iter()
             .filter_map(|sha| {
                 let pb_clone = Arc::clone(&pb);
                 let features = self.process_non_cve_commit(sha);
@@ -627,8 +642,12 @@ impl CVEDataCollector {
     }
 
     // Main method to build the dataset - now orchestrates smaller methods
-    pub fn build_dataset(&mut self, max_workers: usize,
-               max_cve: Option<usize>, max_non_cve: Option<usize>) -> Vec<CommitFeatures> {
+    pub fn build_dataset(
+        &mut self,
+        max_workers: usize,
+        max_cve: Option<usize>,
+        max_non_cve: Option<usize>,
+    ) -> Vec<CommitFeatures> {
         // Setup parallel processing environment
         Self::setup_thread_pool(max_workers);
 
@@ -646,18 +665,25 @@ impl CVEDataCollector {
         let cve_commit_info = self.preprocess_cve_commits(&cve_list);
 
         // Filter duplicate backports
-        let shas_to_process = Self::filter_duplicate_backports(cve_commit_info, &mut seen_upstream_shas);
+        let shas_to_process =
+            Self::filter_duplicate_backports(cve_commit_info, &mut seen_upstream_shas);
 
         let skipped_cve_backports = cve_list.len() - shas_to_process.len();
-        info!("Found {} duplicate backported CVE commits (processing {} unique commits)",
-              skipped_cve_backports, shas_to_process.len());
+        info!(
+            "Found {} duplicate backported CVE commits (processing {} unique commits)",
+            skipped_cve_backports,
+            shas_to_process.len()
+        );
 
         // Process CVE commits
         let processed_commits = self.process_cve_commits(&shas_to_process);
         all_commits.extend(processed_commits);
 
-        info!("Processed {} unique CVE commits (skipped {} duplicates)",
-              all_commits.len(), cve_list.len() - shas_to_process.len());
+        info!(
+            "Processed {} unique CVE commits (skipped {} duplicates)",
+            all_commits.len(),
+            cve_list.len() - shas_to_process.len()
+        );
 
         // Get non-CVE commits
         info!("Getting non-CVE commits from April 1st 2024 to 2 weeks ago...");
@@ -669,14 +695,18 @@ impl CVEDataCollector {
         let newest_date_str = newest_date.format("%Y-%m-%d").to_string();
 
         // Get list of linux-* branches
-        info!("Getting non-CVE commits between April 1st 2024 and 2 weeks ago from linux- branches...");
+        info!(
+            "Getting non-CVE commits between April 1st 2024 and 2 weeks ago from linux- branches..."
+        );
         let linux_branches = self.get_linux_branches();
 
         // Collect non-CVE commits from branches
-        let all_branch_shas = self.collect_non_cve_commits(&linux_branches, oldest_date, &newest_date_str);
+        let all_branch_shas =
+            self.collect_non_cve_commits(&linux_branches, oldest_date, &newest_date_str);
 
         // Filter out CVE commits
-        let non_cve_shas: Vec<String> = all_branch_shas.into_iter()
+        let non_cve_shas: Vec<String> = all_branch_shas
+            .into_iter()
             .filter(|sha| !self.cve_commits.contains(sha))
             .collect();
 
@@ -692,16 +722,20 @@ impl CVEDataCollector {
             Self::deduplicate_non_cve_commits(commit_info_results, &mut seen_upstream_shas);
 
         let branch_duplicates = non_cve_count - unique_non_cve.len() - backported_shas.len();
-        info!("Found {} unique non-CVE commits (skipped {} duplicates by message/subject, {} by upstream SHA)",
-              unique_non_cve.len(), branch_duplicates - skipped_backports, skipped_backports);
+        info!(
+            "Found {} unique non-CVE commits (skipped {} duplicates by message/subject, {} by upstream SHA)",
+            unique_non_cve.len(),
+            branch_duplicates - skipped_backports,
+            skipped_backports
+        );
 
         // Limit non-CVE commits if needed
         let non_cve_list: Vec<String> = match max_non_cve {
             Some(limit) if limit < unique_non_cve.len() => {
                 info!("Limiting non-CVE commits to {limit} for testing");
                 unique_non_cve.into_iter().take(limit).collect()
-            },
-            _ => unique_non_cve
+            }
+            _ => unique_non_cve,
         };
 
         // Process backported CVE commits
@@ -715,13 +749,16 @@ impl CVEDataCollector {
         // Log summary information
         info!("Final dataset: {} total unique commits", all_commits.len());
 
-        let cve_count = all_commits.iter()
+        let cve_count = all_commits
+            .iter()
             .filter(|c| c.was_selected == Some(true)) // Count commits that were assigned CVEs
             .count();
 
         info!("  - CVE commits: {cve_count} (direct & backported, deduplicated by upstream SHA)");
-        info!("  - Non-CVE commits: {} (deduplicated by message, subject, and upstream SHA)",
-              all_commits.len() - cve_count);
+        info!(
+            "  - Non-CVE commits: {} (deduplicated by message, subject, and upstream SHA)",
+            all_commits.len() - cve_count
+        );
 
         all_commits
     }
@@ -798,8 +835,12 @@ mod tests {
         assert!(!collector.seen_commit_messages.contains("abcdef1234"));
 
         // Insert values into the HashSets to simulate previous commits
-        collector.seen_subject_lines.insert("Test subject".to_string());
-        collector.seen_commit_messages.insert("abcdef1234".to_string());
+        collector
+            .seen_subject_lines
+            .insert("Test subject".to_string());
+        collector
+            .seen_commit_messages
+            .insert("abcdef1234".to_string());
 
         // Verify they are now detected as seen
         assert!(collector.seen_subject_lines.contains("Test subject"));
@@ -848,7 +889,8 @@ mod tests {
 
         // Deduplicate by subject line (simulates what build_dataset would do)
         let mut unique_subjects = HashSet::new();
-        let deduplicated: Vec<CommitFeatures> = commits.into_iter()
+        let deduplicated: Vec<CommitFeatures> = commits
+            .into_iter()
             .filter(|commit| {
                 let subject = commit.message.lines().next().unwrap_or("").to_string();
                 unique_subjects.insert(subject)
@@ -859,7 +901,8 @@ mod tests {
         assert_eq!(deduplicated.len(), 2);
 
         // Check the subjects of the remaining commits
-        let subjects: Vec<String> = deduplicated.iter()
+        let subjects: Vec<String> = deduplicated
+            .iter()
             .map(|commit| commit.message.lines().next().unwrap_or("").to_string())
             .collect();
 

@@ -2,23 +2,23 @@
 // (c) 2025, Sasha Levin <sashal@kernel.org>
 
 use clap::{Arg, ArgAction, Command};
-use log::{info, debug, error, warn};
+use indicatif::{ProgressBar, ProgressStyle};
+use log::{debug, error, info, warn};
 use std::collections::HashMap;
 use std::fmt::Write;
-use std::path::{Path, PathBuf};
 use std::fs;
-use indicatif::{ProgressBar, ProgressStyle};
+use std::path::{Path, PathBuf};
 
 // Internal modules
-mod collector;
 mod classifier;
+mod collector;
 mod utils;
 
 // Import from commit-classifier library
-use commit_classifier::{ProviderResult, PredictionResult};
-use collector::CVEDataCollector;
 use classifier::CVEClassifier;
-use utils::{setup_logging, get_cve_root};
+use collector::CVEDataCollector;
+use commit_classifier::{PredictionResult, ProviderResult};
+use utils::{get_cve_root, setup_logging};
 
 /// Configuration struct for prediction and prompt processing
 struct RunConfig<'a> {
@@ -142,7 +142,10 @@ fn run_training(matches: &clap::ArgMatches) {
     let model_dir_path = Path::new(model_dir);
     let test_mode = matches.get_flag("test");
 
-    debug!("Initializing data collector with kernel repo: {}", kernel_repo_path.display());
+    debug!(
+        "Initializing data collector with kernel repo: {}",
+        kernel_repo_path.display()
+    );
     debug!("CVE commits path: {}", cve_path.display());
     let collector = match CVEDataCollector::new(kernel_repo_path, Some(&cve_path)) {
         Ok(c) => c,
@@ -164,14 +167,13 @@ fn run_training(matches: &clap::ArgMatches) {
     };
 
     let mut collector = collector;
-    let dataset = collector.build_dataset(
-        max_workers,
-        max_cve,
-        max_non_cve
-    );
+    let dataset = collector.build_dataset(max_workers, max_cve, max_non_cve);
 
     // Count commits that were assigned CVEs
-    let cve_count = dataset.iter().filter(|c| c.was_selected == Some(true)).count();
+    let cve_count = dataset
+        .iter()
+        .filter(|c| c.was_selected == Some(true))
+        .count();
     info!("Dataset built with {} total commits:", dataset.len());
     info!("  - {cve_count} commits with CVEs");
     info!("  - {} commits without CVEs", dataset.len() - cve_count);
@@ -183,11 +185,11 @@ fn run_training(matches: &clap::ArgMatches) {
         Vec::new(),
         None,
         Some(&vectorstore_dir),
-        Some(kernel_repo_path)
+        Some(kernel_repo_path),
     );
 
     if let Err(e) = classifier.train(&dataset) {
-            error!("Failed to train classifier: {e}");
+        error!("Failed to train classifier: {e}");
         std::process::exit(1);
     }
 
@@ -208,7 +210,7 @@ fn initialize_classifier(config: &RunConfig) -> CVEClassifier {
 
     let mut classifier = if model_path.exists() {
         info!("Loading model from {}", model_path.display());
-        
+
         match CVEClassifier::load_model(&model_path) {
             Ok(c) => c,
             Err(e) => {
@@ -217,17 +219,20 @@ fn initialize_classifier(config: &RunConfig) -> CVEClassifier {
                 CVEClassifier::new_for_prompt(
                     config.llm_providers.to_vec(),
                     None,
-                    Some(config.kernel_repo_path)
+                    Some(config.kernel_repo_path),
                 )
             }
         }
     } else {
-        info!("Model file not found at {}. Continuing without RAG support.", model_path.display());
+        info!(
+            "Model file not found at {}. Continuing without RAG support.",
+            model_path.display()
+        );
         // Create a classifier without vectorstore/embeddings for RAG
         CVEClassifier::new_for_prompt(
             config.llm_providers.to_vec(),
             None,
-            Some(config.kernel_repo_path)
+            Some(config.kernel_repo_path),
         )
     };
 
@@ -273,12 +278,20 @@ fn configure_ollama_provider(config: &RunConfig, classifier: &mut CVEClassifier)
         && let Some(obj) = llm_config.as_object_mut()
     {
         // Set Ollama server URL if provided
-        if let Some(ollama_server) = config.matches.get_one::<String>("ollama-server").map(String::as_str) {
+        if let Some(ollama_server) = config
+            .matches
+            .get_one::<String>("ollama-server")
+            .map(String::as_str)
+        {
             obj.insert("api_host".to_string(), serde_json::json!(ollama_server));
         }
 
         // Set Ollama model if provided
-        if let Some(ollama_model) = config.matches.get_one::<String>("ollama-model").map(String::as_str) {
+        if let Some(ollama_model) = config
+            .matches
+            .get_one::<String>("ollama-model")
+            .map(String::as_str)
+        {
             // Check if it's a built-in model or custom
             let is_builtin = ["llama3", "mistral", "gemma"].contains(&ollama_model);
 
@@ -296,7 +309,9 @@ fn configure_ollama_provider(config: &RunConfig, classifier: &mut CVEClassifier)
 fn configure_exec_provider(config: &RunConfig, classifier: &mut CVEClassifier) {
     if let Some(exec_path) = config.matches.get_one::<String>("exec").map(String::as_str) {
         // Create or get existing config for exec
-        let exec_config = classifier.llm_configs.entry("exec".to_string())
+        let exec_config = classifier
+            .llm_configs
+            .entry("exec".to_string())
             .or_insert_with(|| serde_json::json!({}));
 
         if let Some(obj) = exec_config.as_object_mut() {
@@ -304,18 +319,29 @@ fn configure_exec_provider(config: &RunConfig, classifier: &mut CVEClassifier) {
             obj.insert("executable_path".to_string(), serde_json::json!(exec_path));
 
             // Set debug logging
-            obj.insert("debug_logging".to_string(), serde_json::json!(config.verbose));
+            obj.insert(
+                "debug_logging".to_string(),
+                serde_json::json!(config.verbose),
+            );
 
             // Parse and set exec parameters if provided
-            if let Some(exec_params) = config.matches.get_one::<String>("exec-params").map(String::as_str) {
-                let params: Vec<String> = exec_params.split(',')
+            if let Some(exec_params) = config
+                .matches
+                .get_one::<String>("exec-params")
+                .map(String::as_str)
+            {
+                let params: Vec<String> = exec_params
+                    .split(',')
                     .map(|s| s.trim().to_string())
                     .collect();
 
                 obj.insert("arguments".to_string(), serde_json::json!(params));
             } else {
                 // Set empty arguments if not provided
-                obj.insert("arguments".to_string(), serde_json::json!(Vec::<String>::new()));
+                obj.insert(
+                    "arguments".to_string(),
+                    serde_json::json!(Vec::<String>::new()),
+                );
             }
         }
     } else {
@@ -327,7 +353,8 @@ fn configure_exec_provider(config: &RunConfig, classifier: &mut CVEClassifier) {
 /// Gets the CVE path and initializes the data collector
 fn initialize_collector(config: &RunConfig) -> CVEDataCollector {
     // Use the provided path or fall back to the default published directory
-    let cve_path = config.matches
+    let cve_path = config
+        .matches
         .get_one::<String>("cve-commits")
         .map_or_else(default_cve_path, PathBuf::from);
 
@@ -350,7 +377,7 @@ fn generate_and_save_prompt(
     pb: &ProgressBar,
 ) -> bool {
     let commit_text = CVEClassifier::format_commit_info(features);
-    
+
     // Only attempt to find similar commits if we have a vectorstore
     let similar_commits = if classifier.vectorstore.is_some() {
         if classifier.embeddings.is_initialized() {
@@ -397,7 +424,8 @@ fn generate_and_save_prompt(
         None
     };
 
-    let prompt = CVEClassifier::construct_prompt(&commit_text, &similar_commits, fixes_context.as_deref());
+    let prompt =
+        CVEClassifier::construct_prompt(&commit_text, &similar_commits, fixes_context.as_deref());
 
     let prompt_dir_path = Path::new(prompt_dir);
     if !prompt_dir_path.exists()
@@ -456,8 +484,18 @@ fn display_results(config: &RunConfig, results: &HashMap<String, PredictionResul
         let should_assign_cve = result.should_select;
         let vote_ratio = &result.vote_ratio;
 
-        let status = if should_assign_cve { "ASSIGN CVE" } else { "NO CVE NEEDED" };
-        info!("Commit {}: {} (Votes: {}) - {}", &sha[0..10], status, vote_ratio, subject);
+        let status = if should_assign_cve {
+            "ASSIGN CVE"
+        } else {
+            "NO CVE NEEDED"
+        };
+        info!(
+            "Commit {}: {} (Votes: {}) - {}",
+            &sha[0..10],
+            status,
+            vote_ratio,
+            subject
+        );
 
         if config.verbose {
             print_provider_details(&result.provider_results);
@@ -467,16 +505,18 @@ fn display_results(config: &RunConfig, results: &HashMap<String, PredictionResul
 
 /// Save results to output file if specified
 fn save_results_to_file(config: &RunConfig, results: &HashMap<String, PredictionResult>) {
-    if let Some(output_file) = config.matches.get_one::<String>("output").map(String::as_str) {
+    if let Some(output_file) = config
+        .matches
+        .get_one::<String>("output")
+        .map(String::as_str)
+    {
         let output_path = Path::new(output_file);
         info!("Saving results to {}", output_path.display());
 
         match serde_json::to_string_pretty(results) {
-            Ok(json) => {
-                match fs::write(output_path, json) {
-                    Ok(()) => info!("Results saved successfully"),
-                    Err(e) => error!("Error writing results file: {e}"),
-                }
+            Ok(json) => match fs::write(output_path, json) {
+                Ok(()) => info!("Results saved successfully"),
+                Err(e) => error!("Error writing results file: {e}"),
             },
             Err(e) => error!("Error serializing results: {e}"),
         }
@@ -488,7 +528,11 @@ fn run_prediction(config: &RunConfig) -> HashMap<String, PredictionResult> {
     let mut classifier = initialize_classifier(config);
 
     let mut commits_to_analyze = Vec::new();
-    if let Some(commit) = config.matches.get_one::<String>("commit").map(String::as_str) {
+    if let Some(commit) = config
+        .matches
+        .get_one::<String>("commit")
+        .map(String::as_str)
+    {
         commits_to_analyze.push(commit.to_string());
     }
     if let Some(commits) = config.matches.get_many::<String>("commits") {
@@ -499,7 +543,9 @@ fn run_prediction(config: &RunConfig) -> HashMap<String, PredictionResult> {
     let mut results = HashMap::new();
 
     if commits_to_analyze.is_empty() {
-        error!("No valid commits to analyze. Please provide valid commit SHAs with --commit SHA or --commits SHA1 SHA2 SHA3");
+        error!(
+            "No valid commits to analyze. Please provide valid commit SHAs with --commit SHA or --commits SHA1 SHA2 SHA3"
+        );
         std::process::exit(1);
     }
 
@@ -508,9 +554,13 @@ fn run_prediction(config: &RunConfig) -> HashMap<String, PredictionResult> {
         ProgressBar::hidden()
     } else {
         let pb = ProgressBar::new(commits_to_analyze.len() as u64);
-        pb.set_style(ProgressStyle::default_bar()
-            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})")
-            .unwrap());
+        pb.set_style(
+            ProgressStyle::default_bar()
+                .template(
+                    "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})",
+                )
+                .unwrap(),
+        );
         pb
     };
 
@@ -527,15 +577,18 @@ fn run_prediction(config: &RunConfig) -> HashMap<String, PredictionResult> {
                     continue;
                 }
 
-                match config.runtime.block_on(classifier.predict(&features, config.verbose)) {
+                match config
+                    .runtime
+                    .block_on(classifier.predict(&features, config.verbose))
+                {
                     Ok(result) => {
                         process_prediction_result(config, sha, result, &mut results);
-                    },
+                    }
                     Err(e) => {
                         error!("Failed to get prediction for commit {sha}: {e}");
                     }
                 }
-            },
+            }
             None => {
                 warn!("Failed to get features for commit {sha}");
             }
@@ -566,9 +619,12 @@ fn create_prompt_llm_config(config: &RunConfig) -> Option<HashMap<String, serde_
     // Set debug logging for verbose mode
     if config.verbose {
         for provider in config.llm_providers {
-            configs.insert(provider.clone(), serde_json::json!({
-                "debug_logging": true
-            }));
+            configs.insert(
+                provider.clone(),
+                serde_json::json!({
+                    "debug_logging": true
+                }),
+            );
         }
     }
 
@@ -593,12 +649,20 @@ fn configure_prompt_ollama(config: &RunConfig, configs: &mut HashMap<String, ser
 
     if let Some(obj) = ollama_config.as_object_mut() {
         // Set Ollama server URL if provided
-        if let Some(ollama_server) = config.matches.get_one::<String>("ollama-server").map(String::as_str) {
+        if let Some(ollama_server) = config
+            .matches
+            .get_one::<String>("ollama-server")
+            .map(String::as_str)
+        {
             obj.insert("api_host".to_string(), serde_json::json!(ollama_server));
         }
 
         // Set Ollama model if provided
-        if let Some(ollama_model) = config.matches.get_one::<String>("ollama-model").map(String::as_str) {
+        if let Some(ollama_model) = config
+            .matches
+            .get_one::<String>("ollama-model")
+            .map(String::as_str)
+        {
             // Check if it's a built-in model or custom
             let is_builtin = ["llama3", "mistral", "gemma"].contains(&ollama_model);
 
@@ -626,15 +690,23 @@ fn configure_prompt_exec(config: &RunConfig, configs: &mut HashMap<String, serde
             obj.insert("executable_path".to_string(), serde_json::json!(exec_path));
 
             // Parse and set exec parameters if provided
-            if let Some(exec_params) = config.matches.get_one::<String>("exec-params").map(String::as_str) {
-                let params: Vec<String> = exec_params.split(',')
+            if let Some(exec_params) = config
+                .matches
+                .get_one::<String>("exec-params")
+                .map(String::as_str)
+            {
+                let params: Vec<String> = exec_params
+                    .split(',')
                     .map(|s| s.trim().to_string())
                     .collect();
 
                 obj.insert("arguments".to_string(), serde_json::json!(params));
             } else {
                 // Set empty arguments if not provided
-                obj.insert("arguments".to_string(), serde_json::json!(Vec::<String>::new()));
+                obj.insert(
+                    "arguments".to_string(),
+                    serde_json::json!(Vec::<String>::new()),
+                );
             }
         }
 
@@ -656,7 +728,11 @@ fn handle_prompt_result(config: &RunConfig, result: PredictionResult, file_stem:
             save_explanation(dir, file_stem, &result.provider_results);
         }
     } else {
-        let status = if should_assign_cve { "ASSIGN CVE" } else { "NO CVE NEEDED" };
+        let status = if should_assign_cve {
+            "ASSIGN CVE"
+        } else {
+            "NO CVE NEEDED"
+        };
         info!("Result: {} (Votes: {})", status, result.vote_ratio);
 
         if config.verbose {
@@ -669,15 +745,21 @@ fn handle_prompt_result(config: &RunConfig, result: PredictionResult, file_stem:
 
 /// Saves prompt processing result to file
 fn save_prompt_result_to_file(config: &RunConfig, result: PredictionResult, file_stem: &str) {
-    if let Some(output_file) = config.matches.get_one::<String>("output").map(String::as_str) {
+    if let Some(output_file) = config
+        .matches
+        .get_one::<String>("output")
+        .map(String::as_str)
+    {
         let output_path = Path::new(output_file);
         info!("Saving results to {}", output_path.display());
 
         let mut results = HashMap::new();
         results.insert(file_stem.to_string(), result);
 
-        if let Err(e) = fs::write(output_path,
-            serde_json::to_string_pretty(&results).unwrap_or_default()) {
+        if let Err(e) = fs::write(
+            output_path,
+            serde_json::to_string_pretty(&results).unwrap_or_default(),
+        ) {
             error!("Error writing results file: {e}");
         } else {
             info!("Results saved successfully");
@@ -694,7 +776,7 @@ fn process_custom_prompt(config: &RunConfig, prompt_file_path: &str) {
     let mut classifier = CVEClassifier::new_for_prompt(
         config.llm_providers.to_vec(),
         llm_config,
-        Some(config.kernel_repo_path)
+        Some(config.kernel_repo_path),
     );
 
     let file_stem = Path::new(prompt_file_path)
@@ -711,7 +793,10 @@ fn process_custom_prompt(config: &RunConfig, prompt_file_path: &str) {
     };
 
     info!("Processing prompt from {prompt_file_path}");
-    match config.runtime.block_on(classifier.process_custom_prompt(&prompt, config.verbose)) {
+    match config
+        .runtime
+        .block_on(classifier.process_custom_prompt(&prompt, config.verbose))
+    {
         Ok(result) => handle_prompt_result(config, result, file_stem),
         Err(e) => error!("Failed to process prompt: {e}"),
     }
@@ -764,8 +849,7 @@ fn main() {
     let expanded_kernel_repo = shellexpand::tilde(kernel_repo);
     let kernel_repo_path = Path::new(expanded_kernel_repo.as_ref());
 
-    let runtime = tokio::runtime::Runtime::new()
-        .expect("Failed to create tokio runtime");
+    let runtime = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
 
     if matches.get_flag("train") {
         run_training(&matches);
@@ -807,14 +891,22 @@ fn main() {
         info!("All prompts saved to directory: {dir}");
     }
 
-    if !matches.get_flag("train") && !matches.contains_id("commit") && !matches.contains_id("commits") &&
-       !matches.contains_id("make-prompt") && !matches.contains_id("send-prompt") {
+    if !matches.get_flag("train")
+        && !matches.contains_id("commit")
+        && !matches.contains_id("commits")
+        && !matches.contains_id("make-prompt")
+        && !matches.contains_id("send-prompt")
+    {
         let mut cmd = Command::new("Linux Kernel CVE Classifier");
         println!("{}", cmd.render_help());
     }
 }
 
-fn save_explanation(dir: &str, file_stem: &str, provider_results: &HashMap<String, ProviderResult>) {
+fn save_explanation(
+    dir: &str,
+    file_stem: &str,
+    provider_results: &HashMap<String, ProviderResult>,
+) {
     let explanation_dir_path = Path::new(dir);
 
     if !explanation_dir_path.exists()
@@ -839,22 +931,35 @@ fn save_explanation(dir: &str, file_stem: &str, provider_results: &HashMap<Strin
     }
 
     if let Err(e) = fs::write(&filepath, full_explanation) {
-        error!("Failed to write explanation file {}: {}", filepath.display(), e);
+        error!(
+            "Failed to write explanation file {}: {}",
+            filepath.display(),
+            e
+        );
     } else {
-        debug!("Saved explanation for {} to {}", file_stem, filepath.display());
+        debug!(
+            "Saved explanation for {} to {}",
+            file_stem,
+            filepath.display()
+        );
     }
 }
 
 fn print_provider_details(provider_results: &HashMap<String, ProviderResult>) {
     for (provider, provider_result) in provider_results {
         let should_assign_cve = provider_result.should_select;
-        let provider_decision = if should_assign_cve { "ASSIGN CVE" } else { "NO CVE NEEDED" };
+        let provider_decision = if should_assign_cve {
+            "ASSIGN CVE"
+        } else {
+            "NO CVE NEEDED"
+        };
         info!("  - {provider}: {provider_decision}");
 
         if let Some(error) = &provider_result.error {
             info!("      Error: {error}");
         } else {
-            let explanation_lines: Vec<&str> = provider_result.explanation.lines().take(3).collect();
+            let explanation_lines: Vec<&str> =
+                provider_result.explanation.lines().take(3).collect();
             for line in &explanation_lines {
                 info!("      {line}");
             }

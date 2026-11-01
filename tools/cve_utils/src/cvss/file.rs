@@ -13,14 +13,14 @@
 //
 // Copyright (c) 2026 - Sasha Levin <sashal@kernel.org>
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use std::fs;
 use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use tempfile::NamedTempFile;
 
-use super::formula::{compute_base_score, ScoreResult};
+use super::formula::{ScoreResult, compute_base_score};
 use super::metrics::CvssMetrics;
 use super::rationale::Rationale;
 use super::vector::{format_vector, parse_vector};
@@ -64,8 +64,8 @@ impl CvssFile {
     /// Returns an error if the file cannot be read, or if its contents are not
     /// a well-formed CVSS file.
     pub fn read(path: &Path) -> Result<Self> {
-        let content = fs::read_to_string(path)
-            .context(format!("failed to read {}", path.display()))?;
+        let content =
+            fs::read_to_string(path).context(format!("failed to read {}", path.display()))?;
         Self::parse(&content).context(format!("invalid CVSS file {}", path.display()))
     }
 
@@ -151,8 +151,10 @@ impl CvssFile {
     /// if the rename over `path` fails.
     pub fn write(&self, path: &Path) -> Result<()> {
         let dir = path.parent().unwrap_or_else(|| Path::new("."));
-        let mut tmp = NamedTempFile::new_in(dir)
-            .context(format!("failed to create a temporary file in {}", dir.display()))?;
+        let mut tmp = NamedTempFile::new_in(dir).context(format!(
+            "failed to create a temporary file in {}",
+            dir.display()
+        ))?;
 
         tmp.write_all(self.render().as_bytes())
             .context(format!("failed to write {}", path.display()))?;

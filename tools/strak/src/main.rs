@@ -8,14 +8,14 @@
 // Copyright (c) 2025 - Sasha Levin <sashal@kernel.org>
 // Copyright (c) 2025 - Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use clap::Parser;
+use cve_utils::Kernel;
 use cve_utils::common;
 use cve_utils::compare_kernel_versions;
 use cve_utils::dyad::DyadEntry;
 use cve_utils::get_kernel_tree;
 use cve_utils::run_command;
-use cve_utils::Kernel;
 use log::debug;
 use log::error;
 use owo_colors::{OwoColorize, Stream::Stdout};
@@ -222,7 +222,8 @@ fn previous_stable_tag(kernel_tree: &Path, base_tag: &str) -> Result<String> {
     let tag = run_command(
         "git",
         &[
-            "describe", "--abbrev=0",
+            "describe",
+            "--abbrev=0",
             "--match=v[0-9]*",
             "--exclude=*-rc*",
             &parent,
@@ -245,11 +246,7 @@ fn short_sha(s: &str) -> &str {
 fn build_ancestry_context(kernel_tree: &Path, git_sha: &str) -> Result<AncestryWindow> {
     let kernel_tree_str = kernel_tree.to_string_lossy();
 
-    let describe_output = run_command(
-        "git",
-        &["describe", git_sha],
-        Some(&kernel_tree_str),
-    )?;
+    let describe_output = run_command("git", &["describe", git_sha], Some(&kernel_tree_str))?;
 
     // "v6.11-rc2-8-gbbf3c7ff9dfa" -> base tag "v6.11-rc2"
     // "v6.12" -> base tag "v6.12"
@@ -324,7 +321,11 @@ fn do_is_ancestor(first: &Kernel, second: &Kernel, ctx: &AncestryWindow) -> bool
             return in_ancestry;
         }
         if first < second {
-            debug!("    [fast path] major match, {} < {}", first.version(), second.version());
+            debug!(
+                "    [fast path] major match, {} < {}",
+                first.version(),
+                second.version()
+            );
             return true;
         }
         return false;
@@ -349,7 +350,11 @@ fn do_is_ancestor(first: &Kernel, second: &Kernel, ctx: &AncestryWindow) -> bool
             );
             return in_ancestry;
         }
-        debug!("    [fast path] mainline {} < {}", first.version(), second.version());
+        debug!(
+            "    [fast path] mainline {} < {}",
+            first.version(),
+            second.version()
+        );
         return true;
     }
 

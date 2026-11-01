@@ -102,7 +102,8 @@ mod tests {
 
     #[test]
     fn test_strip_no_tags_preserves_full_text() {
-        let text = "Fix a bug\n\nThis is a detailed description of the fix.\nIt spans multiple lines.";
+        let text =
+            "Fix a bug\n\nThis is a detailed description of the fix.\nIt spans multiple lines.";
         let result = strip_commit_text(text, &tags());
         assert!(result.contains("Fix a bug"));
         assert!(result.contains("This is a detailed description of the fix."));

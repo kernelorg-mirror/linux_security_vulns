@@ -191,22 +191,19 @@ impl Ord for KernelVersion {
 /// Check if a kernel version is a release candidate (ends with -rc)
 #[must_use]
 pub fn version_is_rc(version: &str) -> bool {
-    KernelVersion::from_str(version)
-        .is_ok_and(|v| v.is_rc())
+    KernelVersion::from_str(version).is_ok_and(|v| v.is_rc())
 }
 
 /// Check if a kernel version is a queue (ends with -queue)
 #[must_use]
 pub fn version_is_queue(version: &str) -> bool {
-    KernelVersion::from_str(version)
-        .is_ok_and(|v| v.is_queue())
+    KernelVersion::from_str(version).is_ok_and(|v| v.is_queue())
 }
 
 /// Check if a version is a mainline kernel version
 #[must_use]
 pub fn version_is_mainline(version: &str) -> bool {
-    KernelVersion::from_str(version)
-        .is_ok_and(|v| v.is_mainline())
+    KernelVersion::from_str(version).is_ok_and(|v| v.is_mainline())
 }
 
 /// Extract the "major" portion of a kernel version string
@@ -293,19 +290,37 @@ mod tests {
     fn test_version_comparisons() {
         assert_eq!(compare_kernel_versions("5.4", "5.4"), Ordering::Equal);
         assert_eq!(compare_kernel_versions("5.4.1", "5.4.1"), Ordering::Equal);
-        assert_eq!(compare_kernel_versions("5.4-rc3", "5.4-rc3"), Ordering::Equal);
+        assert_eq!(
+            compare_kernel_versions("5.4-rc3", "5.4-rc3"),
+            Ordering::Equal
+        );
 
         assert_eq!(compare_kernel_versions("5.4", "5.4.1"), Ordering::Less);
         assert_eq!(compare_kernel_versions("5.4.1", "5.4.2"), Ordering::Less);
-        assert_eq!(compare_kernel_versions("5.4-rc2", "5.4-rc3"), Ordering::Less);
+        assert_eq!(
+            compare_kernel_versions("5.4-rc2", "5.4-rc3"),
+            Ordering::Less
+        );
 
         assert_eq!(compare_kernel_versions("5.4.1", "5.4"), Ordering::Greater);
-        assert_eq!(compare_kernel_versions("5.4.200", "5.4.1"), Ordering::Greater);
-        assert_eq!(compare_kernel_versions("5.4-rc6", "5.4-rc3"), Ordering::Greater);
+        assert_eq!(
+            compare_kernel_versions("5.4.200", "5.4.1"),
+            Ordering::Greater
+        );
+        assert_eq!(
+            compare_kernel_versions("5.4-rc6", "5.4-rc3"),
+            Ordering::Greater
+        );
 
         assert_eq!(compare_kernel_versions("6.1", "6.0.100"), Ordering::Greater);
-        assert_eq!(compare_kernel_versions("5.4.234", "5.3.600"), Ordering::Greater);
-        assert_eq!(compare_kernel_versions("6.10.100", "3.2"), Ordering::Greater);
+        assert_eq!(
+            compare_kernel_versions("5.4.234", "5.3.600"),
+            Ordering::Greater
+        );
+        assert_eq!(
+            compare_kernel_versions("6.10.100", "3.2"),
+            Ordering::Greater
+        );
     }
 
     // --- 2.6.x / 2.4.x special handling ---
@@ -330,8 +345,14 @@ mod tests {
 
     #[test]
     fn test_rc_ordering() {
-        assert_eq!(compare_kernel_versions("6.8-rc1", "6.8-rc2"), Ordering::Less);
-        assert_eq!(compare_kernel_versions("6.8-rc2", "6.8-rc1"), Ordering::Greater);
+        assert_eq!(
+            compare_kernel_versions("6.8-rc1", "6.8-rc2"),
+            Ordering::Less
+        );
+        assert_eq!(
+            compare_kernel_versions("6.8-rc2", "6.8-rc1"),
+            Ordering::Greater
+        );
         // RC is less than final release
         assert_eq!(compare_kernel_versions("6.8-rc1", "6.8"), Ordering::Less);
         assert_eq!(compare_kernel_versions("6.8", "6.8-rc7"), Ordering::Greater);
@@ -350,7 +371,10 @@ mod tests {
     #[test]
     fn test_cross_major_comparison() {
         assert_eq!(compare_kernel_versions("5.15.100", "6.1.1"), Ordering::Less);
-        assert_eq!(compare_kernel_versions("6.1.1", "5.15.100"), Ordering::Greater);
+        assert_eq!(
+            compare_kernel_versions("6.1.1", "5.15.100"),
+            Ordering::Greater
+        );
     }
 
     // --- FromStr round-trip and field checks ---
