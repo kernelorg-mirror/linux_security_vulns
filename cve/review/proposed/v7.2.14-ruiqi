@@ -1,0 +1,35 @@
+2935062be771 sched_ext: Wait for SCX_OPSS_DISPATCHING before moving tasks off DSQs
+67aded1da114 ntfs: fix race between fallocate and mmap reads
+610c4438fb66 mm/damon/core: error damos_commit_quota_goal() for zero target_value
+2f93bcb3f9aa sched/fair: Avoid overflow in place_entity()
+86b55991d3cd Bluetooth: L2CAP: refuse __l2cap_chan_add if chan already has conn
+66877a312ae3 tracing: Hold trace_types_lock when updating modules in persistent instances
+5a6bd62f0914 tracing: Hold trace_types_lock when resetting last boot data from readers
+1fdc4164e488 tracing: Reject incomplete event filter expressions
+d5c42664fc09 tracing: Save the event file instead of the compatible histogram
+3403d9bb27eb tracing/histograms: Verify event_call identity when updating synth_event refcount
+097fd0050089 tracing/syscalls: Use copy_from_user for the faultable syscall buffer
+0e5663856b69 io-wq: order the exit bit against worker creation task work
+c254eec4364b io_uring/waitid: own the request before clearing ->head
+4c83e39f4d19 io_uring/cmd: don't leave list poison in ->hash_node
+34f5a664c34d io_uring/wait: don't spin on a stuck overflow list
+63c103279a95 io_uring/io-wq: don't lose the signal that ends work
+436d48a2ed13 io_uring/io-wq: don't hide a link from cancellations
+22e643e61b9b io_uring: don't flood a cancelling task with task_work
+76a82c666abf io_uring/cancel: rearm local work wake up before sleep
+68a95c396889 io_uring/mpscq: disable preemption while pushing
+fe6ca13c98b1 io_uring/cancel: let CANCEL_ALL find parked requests
+89f193dc3ef4 io_uring/timeout: don't lose a cancel as io-wq arms a timeout
+98787d3fa4e9 io_uring/waitid: prevent cancel reference wrap
+51409aaa01f8 keys: Avoid the owner account dereference in named keyring lookup
+0a0ec45bf577 keys: Check the authorization payload in process keyring searches
+fced7238b7e8 keys: Protect the type name while describing a key
+de891c73c1cf keys: make keyring indexes independent of kernel addresses
+925c84e3cc21 keys: Protect the read method check against type removal
+0b157166e612 KEYS: Fix key_reject_and_link() race with keyring restriction
+f92d0ccb05bf keys/trusted_keys: return immediately after TPM unseal failure
+9695df3b1db4 asymmetric_keys: reject trust keys without IDs
+e1f339ff3b83 ftrace: Initialize modname and offset in print_rec()
+61d58591aa01 coredump: hold RCU while releasing parked threads
+cabc249e6560 ptrace: refuse to change the signal mask of a user worker
+296a98c1fa50 fork: release the files of a failed fork after sched_cancel_fork()
