@@ -1,0 +1,30 @@
+67aded1da114 ntfs: fix race between fallocate and mmap reads [auto: cve already created]
+0fecc393f206 ntfs: take invalidate_lock in ntfs_filemap_page_mkwrite() [auto: cve already created]
+610c4438fb66 mm/damon/core: error damos_commit_quota_goal() for zero target_value [auto: already quorate]
+86b55991d3cd Bluetooth: L2CAP: refuse __l2cap_chan_add if chan already has conn [auto: already quorate]
+66877a312ae3 tracing: Hold trace_types_lock when updating modules in persistent instances [auto: already quorate]
+5a6bd62f0914 tracing: Hold trace_types_lock when resetting last boot data from readers [auto: already quorate]
+1fdc4164e488 tracing: Reject incomplete event filter expressions [auto: already quorate]
+d5c42664fc09 tracing: Save the event file instead of the compatible histogram [auto: already quorate]
+3403d9bb27eb tracing/histograms: Verify event_call identity when updating synth_event refcount [auto: already quorate]
+097fd0050089 tracing/syscalls: Use copy_from_user for the faultable syscall buffer [auto: already quorate]
+0e5663856b69 io-wq: order the exit bit against worker creation task work
+c254eec4364b io_uring/waitid: own the request before clearing ->head [auto: already quorate]
+4c83e39f4d19 io_uring/cmd: don't leave list poison in ->hash_node [auto: already quorate]
+34f5a664c34d io_uring/wait: don't spin on a stuck overflow list [auto: already quorate]
+63c103279a95 io_uring/io-wq: don't lose the signal that ends work [auto: already quorate]
+436d48a2ed13 io_uring/io-wq: don't hide a link from cancellations
+22e643e61b9b io_uring: don't flood a cancelling task with task_work
+76a82c666abf io_uring/cancel: rearm local work wake up before sleep
+68a95c396889 io_uring/mpscq: disable preemption while pushing
+98787d3fa4e9 io_uring/waitid: prevent cancel reference wrap [auto: already quorate]
+51409aaa01f8 keys: Avoid the owner account dereference in named keyring lookup [auto: already quorate]
+0a0ec45bf577 keys: Check the authorization payload in process keyring searches [auto: already quorate]
+fced7238b7e8 keys: Protect the type name while describing a key [auto: already quorate]
+de891c73c1cf keys: make keyring indexes independent of kernel addresses [auto: already quorate]
+925c84e3cc21 keys: Protect the read method check against type removal [auto: already quorate]
+f92d0ccb05bf keys/trusted_keys: return immediately after TPM unseal failure [auto: already quorate]
+9695df3b1db4 asymmetric_keys: reject trust keys without IDs [auto: already quorate]
+e1f339ff3b83 ftrace: Initialize modname and offset in print_rec() [auto: already quorate]
+61d58591aa01 coredump: hold RCU while releasing parked threads [auto: already quorate]
+296a98c1fa50 fork: release the files of a failed fork after sched_cancel_fork() [auto: already quorate]
