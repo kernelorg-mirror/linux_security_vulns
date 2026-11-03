@@ -24,3 +24,11 @@ f92d0ccb05bf keys/trusted_keys: return immediately after TPM unseal failure
 c254eec4364b io_uring/waitid: own the request before clearing ->head
 34f5a664c34d io_uring/wait: don't spin on a stuck overflow list
 63c103279a95 io_uring/io-wq: don't lose the signal that ends work
+937d38dcacd6 ("io_uring/poll: avoid retry wakeup loss when dropping ownership")
+8444de681a17 ("io_uring/net: don't retry recv on uncommitted buffers")
+a3d7ee11289f ("io_uring/openclose: keep the lock in io_pipe_fixed()")
+ab4536bf2e56 ("io_uring/zcrx: fix buffer offsets in areas above 4GB")
+9c151648780d ("io_uring/napi: make stale entries time out after 60s")
+b88902d8745a ("io_uring: wake ring pollers for local task_work")
+89f193dc3ef4 ("io_uring/timeout: don't lose a cancel as io-wq arms a timeout")
+2935062be771 ("sched_ext: Wait for SCX_OPSS_DISPATCHING before moving tasks off DSQs")
