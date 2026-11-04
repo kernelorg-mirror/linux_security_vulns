@@ -125,8 +125,8 @@ In-Reply-To: ${message_id}
 ${CVE_ENTRY} has now been rejected and is no longer a valid CVE.
 
 EOF
-	echo "Rejected message is at ${txtcyn}${rejected_mbox}${txtrst}"
-	echo "To send it, please run"
+	echo "# Rejected message is at ${txtcyn}${rejected_mbox}${txtrst}"
+	echo "# To send it, please run"
 	echo "	${txtgrn}git send-email ${rejected_mbox}${txtrst}"
 	echo ""
 
@@ -138,7 +138,7 @@ else
 	exit 1
 fi
 
-echo "To reject the CVE with cve.org, please run:"
+echo "# To reject the CVE with cve.org, please run:"
 echo "	${txtgrn}cve -o Linux reject ${CVE_ENTRY} -j '{\"rejectedReasons\": [{\"lang\": \"en\", \"value\": \"This CVE ID has been rejected or withdrawn by its CVE Numbering Authority.\"}]}'${txtrst}"
 
 exit
