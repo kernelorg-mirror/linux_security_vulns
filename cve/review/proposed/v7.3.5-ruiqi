@@ -1,0 +1,213 @@
+6320736af7dc Bluetooth: L2CAP: Reject signalling responses in invalid states
+a518b9a9ef6e Bluetooth: L2CAP: Only accept connection responses to outstanding requests
+2ff3730998b0 smb/server: prevent file publication after tree disconnect
+91c41f952490 xfs: check for buffer overruns when examining local/remote xattr entries
+5d470234d04d xfs: improve dirent bounds checking in scrub and repair
+bf0f3a37e6cc NFSD: stop registering with rpcbind after a failure in listener_set
+c559b0561055 NFSD: Move the cld upcall message out of the caller's stack frame
+2a83fcb50f3c NFSD: Complete a cld upcall when the daemon closes the pipe
+cb0306c52ffa io_uring/cancel: drop sqd->lock while SQPOLL waits
+fca3ff9e2eee io_uring/sqpoll: don't set IO_SQ_THREAD_SHOULD_STOP on thread exit
+9eff9c07e927 io_uring/poll: cancel all matching requests in one pass
+40d070cbb190 block: restore the iterator when rejecting a misaligned bio
+21e018235d99 cpufreq: CPPC: Select the frequency-invariance callback per CPU
+868f63c8bfaf xfrm: retry inexact policy lookup after node reinsertion
+b58943dd690e net/9p/usbg: clear stale request context after abort
+5bfef2b6dafe 9p/trans_virtio: reject mount tags longer than NAME_MAX at probe
+4d183e6f1532 9p/xen: fix refcount leak in p9_xen_response() on wrong tag
+2acd800de882 9p: fix caches_show() out-of-bounds write
+6f401e350939 net/9p/usbg: Fix use-after-free in disable_usb9pfs()
+f81cdb916480 net/9p/usbg: also disable endpoints on p9_usbg_close
+cd1988cf723c net/9p/usbg: call disable_usb9pfs() from usb9pfs_disable()
+5f9807270c7b net/9p/usbg: fix out_req buffer leak in disable_usb9pfs
+bbdb38b2e543 net/9p/usbg: remove bogus context initialization in alloc_requests
+a478958f4c11 net/9p/usbg: clear stale client pointer on close
+86de3a1118a1 xfrm: interface: validate the IP header on xmit
+f9a11716c844 xfrm: espintcp: reorder operations within espintcp_init_sk
+3be436cbd3d2 drm/drm_crtc: ensure dma_fence_ops remain valid during device unbind
+cb104d395da4 drm/drm_crtc: fix race with dma_fence_signal() in ::get_driver_name()
+35c5a5ea4418 wifi: mac80211: reload TDLS header pointer after skb_linearize()
+71f756a4c064 wifi: rsi: Skip TX aggregation setup for non-QoS frames
+9d8ec0b5b529 wifi: cfg80211: fix out-of-bounds read in valid_rule()
+9ee552a42c39 drm/vc4: Publish the output fence outside of job_lock
+5def91015ba7 xfrm4: use a full socket for local errors
+f057a8bfeb6f scsi: aic79xx: Fix NULL pointer dereference in device reset
+6a6e7d7230cd scsi: target: Fix demo-mode dynamic ACL dev-entry UAF vs LUN teardown
+9b4cf60c6b73 9p/xen: validate the response size from the backend
+4e915aa85661 9p: don't decrement a server-owned zero nlink
+ea01fff30f63 batman-adv: mcast: validate tracker padding before forwarding
+f89eda5a9ccf batman-adv: stop originator purge worker before freeing TT
+66dfb2cacda7 ipv6: raw: fix use-after-free in rawv6_send_hdrinc()
+ed6c53b27be4 sctp: account for chunk padding in sctp_init_cause()
+1960146913b3 btrfs: prevent deleting the wrong subvolume by ID
+603a0c40d414 ptp: fix use-after-free in extts_fifo_show() reading tsevqs unlocked
+cdf4b87a18cb scsi: target: Verify the iSCSI ISID is null-terminated
+f086dbdeb6e5 drm/loongson: Fix double free on BO initialization failure
+f00d7a241f84 drm/loongson: Handle buffer mapping failures when clearing a BO
+f5d3eb483fed ALSA: us122l: Add missing NULL check in usb_stream_hwdep_mmap()
+820e00508669 ALSA: us122l: Fix NULL dereference at hwdep open and release
+ceb0d8c22473 ALSA: usx2y: Initialize idle URBs before submitting streams
+aee83c204f80 ALSA: hwdep: Serialize DSP load requests
+23503acb214c bpf: Fix skb_pull() BUG in __bpf_redirect_neigh()
+1dd91081ba3c ksmbd: require DELETE access for delete-on-close opens
+09139429fab3 ksmbd: enforce the read-only share flag when creating a stream
+539223f18026 ksmbd: revert fsids on durable reconnect and replay failure
+d13da43938d1 ksmbd: fix NULL pointer dereference in session_user_name() and session_account_type()
+3457b3bcd344 x86/bugs: Select the BHI mitigation based on the attack vector properly
+c4ba1716853d net: atl1c: drop oversized RX frames instead of panicking
+8296a64df544 ksmbd: do not read past the DACL in the access denied debug message
+c00ec7ad449b ksmbd: grant a POSIX ACL group entry only to the group's members
+68b2aa37afa3 mm/mempolicy: charge shared policy nodes
+a842a1f947da mm/shmem: stop retrying folios that cannot be split
+fa213b08f37f mm/shmem: fix truncate hang in large swap entry
+f4ce23b1feef mm/shmem: preserve allocation errors when swapping in large entries
+5f1ec2cf92a7 mm/shmem: fix truncate loop after boundary swapin failure
+66ce68a249f4 mm/shmem: fix accounting of swapin-error markers
+65a9bf08a3e4 mm/mglru: don't use stack pointers when walking PUD and PMD tables
+d3710111839d mm/shmem: make shmem_file() check the file's inode
+dc24e273244e mm/filemap: read mapping->a_ops->free_folio under i_lock
+8ccb6ded6a47 mm/filemap: don't lose a folio lock wakeup to a signal
+97156a6c355c mm/filemap: finish fault cleanup before dropping the fault lock
+f3c493d2f42b mm/rmap: handle device-exclusive entries in folio_referenced_one()
+f09171b67ea0 mm/huge_memory: fix list corruption when deferred_split_scan() races with deferred_split_folio()
+d90bdc02e36e mm/huge_memory: properly handle refcounted PUD mappings on fork
+994ba6e5c87d drm/v3d: Widen cache_clean_lock over the whole L2TCACTL sequence
+1f1f8e8c5176 cipso: fix optlen corruption in cipso_v4_delopt()
+c77ab4eeeb3e ntfs: don't allow compression on volumes with clusters larger than 4K
+fd1462c96baf vhost-vdpa: fix pinned page leak in vhost_vdpa_pa_map() error path
+f898439ace7f vringh: bound top-level re-entry into indirect tables
+60a792b97933 vringh: reject empty / undersized indirect descriptor tables
+cf8f81babd2e hwmon: (aquacomputer_d5next) reject short status reports
+b7743c6dbe3a hwmon: (aquacomputer_d5next) Check maxcollection when probing AQUAERO devices
+5b51ff0887b9 hwmon: (lm87) Fix drvdata type confusion in vrm_show() and vrm_store()
+61bc4514b8e9 hwmon: (peci/dimmtemp) Fix devres leak and UAF on concurrent unbind
+3ee50a2d76f2 nvme-rdma: fix NULL queue->ctrl dereference on reconnect
+7dfe79db5615 nvme: Do not drop the cdev reference twice when cdev_device_add() fails
+b2691b3a6cd2 KVM: x86/mmu: Conditionally resched when retrying gPTE walk on A/D update failure
+e4558c3d7198 KVM: x86/mmu: Cap number of parent PTEs per SP at 1000 (the arbitrary rmap limit)
+c7c288d178cb KVM: x86: Unconditionally reset MMU context when emulating INIT
+3ae20e4697eb inet: frags: limit the truesize of a reassembly queue
+c3e67bd82b9b ipv6: reject wrapped temporary address preferred lifetimes
+854e5ff8b3ce mm/khugepaged: flush deferred unmaps before dropping a failed folio
+f681d4580d5c mm: fix address wraparound when scanning large folio PTEs
+243cf1f67b36 mm: memory: fix truncation removing mapped folios
+92daa8652f88 mm/hugetlb: fix mremap deadlock when PMD sharing is possible
+0120a603afad mm/hugetlb_vmemmap: map the shared tail page writable
+5d002001601a mm/cma: accept memory of multi-range CMA areas
+dd94d8c7660a mm: memcontrol: fix NULL pointer deref and UAF from high_work_func() on dying memcg
+9a40c050f583 ocfs2: find the xattr entry again after defragmenting a bucket
+9c191a7a4488 ocfs2: find the xattr entry again after converting a block to a bucket
+e8de099f2958 ocfs2: do not read the entry array of an empty xattr bucket
+7b90009546f5 fat: hold truncate_lock in fat_write_failed()
+723982e7052e panic: zero the dynamically allocated taint buffer
+61469249aab0 ocfs2/dlm: serialize migration MLE cleanup on failure
+126429e2f503 ocfs2: stop recovery before shutting down local allocators
+0988f0c0c7c9 ocfs2/cluster: unlink socket containers before releasing resources
+5b4696e0bfc3 ocfs2: cache the mount context for dentry lock callbacks
+2e54b3e18730 net/sched: sch_qfq: prevent aggregate self-replacement
+01c3a5fa6d64 vhost-scsi: zero misaligned I/O bounce pages
+e244725e86be vhost: fix used ring index wrap in vhost_add_used_n_in_order
+0f7bf47f5a0c hwrng: virtio - prevent use-after-free after a failed restore
+bb2e6f166547 vduse: fix VA/PA confusion in the coherent page fault path
+6c6dec7883f8 virtio_blk: use synchronous quiesce in virtblk_freeze_priv()
+894e4e608492 blk-mq: fix out-of-bounds read in blk_mq_free_rqs
+8b8e26599155 xfs: mark the inode preallocated for pNFS write layouts past EOF
+bcf0b7f18ad1 xfs: refuse a pNFS LAYOUTCOMMIT of a range without blocks
+d8c2bc88460f xfs: clamp a pNFS LAYOUTCOMMIT extent before computing its end
+66d1ce09ebd7 xfs: cap the block count of xfs_iomap_write_direct() at one extent
+29f3c1be4e55 xfs: clamp the pNFS layout range to the maximum file size
+5b5d8f351dd9 net: restore refcount ordering for lockless socket access
+0fce44e29fce can: dev: can_dropped_invalid_skb: drop CAN XL frames on non-CAN XL devices
+933bf0fcb325 can: isotp: check the frame type, not just the length
+962947b69589 can: replace ARPHRD_CAN type checks with can_get_ml_priv()
+0f3ad9ab40e3 can: protect the receive lists with a per-device lock
+43c973a0887d can: raw, isotp: copy socket options outside of lock_sock()
+75332c410c81 can: dev: can_fill_info(): don't wake up controller if interface is down
+e6a07d29b0a6 mm/huge_memory: fix truncate racing with PMD zapping
+63a940541358 mm/huge_memory: fix zapping migration entries for device-private THPs
+aa72cf34d90d mm/khugepaged: always recheck the pmd in try_collapse_pte_mapped_thp()
+db38b902307e mm/khugepaged: fix PMD table lock leak in try_collapse_pte_mapped_thp()
+fe2817e3d5ea mm/khugepaged: preserve dirty bits when collapsing PTE-mapped THPs
+79cb51d538ab mm/gup: recheck the PUD under PTL in follow_pud_mask()
+c83ee2fa5a94 mm/gup: fix clearing folios in memfd_pin_folios()
+1dfe4b276c23 mm/gup: fix out-of-bounds write for nr_pages == 0 in GUP-fast
+21a3888d3d2f mm/gup: check for overflow when converting nr_pages to bytes in GUP-fast
+64ae7959a1df mm/mmu_gather: fix flushing ranges with 4 GiB or larger
+6d65925777ec mm/mmu_notifier: finish non-blocking interval invalidation on error
+5ad9e4b0f110 mm/mmu_notifier: set ->mm only after mmgrab()
+402882943dfa mm/mremap: recheck PUDs under the page table lock
+440c8779757f mm/mremap: fix moving PUD leaves
+22d043c1da48 mm/madvise: fix data loss from MADV_FREE on a KSM page
+8db6921cc07b mm/memory: reject remote COW faults on PFN mappings
+7a81bc23dade mm: fix unmap_mapping_range() beyond 4 GiB on 32-bit
+9f02ca8c15a7 mm: fix unkillable fault loop on MAP_DROPPABLE memory
+d03df42ddae1 mm: fix deadlock of mremap() against UFFDIO_MOVE
+890e118e95bf mm/ksm: reset the unstable trees of all nodes
+4c2dec1dce36 mm/ksm: fix use of a freed anon_vma at swap-in
+0193e8336802 mm/vma: call ->may_split() before a partial merge
+23e570927421 mm/huge_memory: split huge PUDs when adjusting VMA boundaries
+e8abc61d8a54 mm/cma: don't release CMA pages still in use
+500624f28eca mm/memory-tiers: unregister empty tiers outside memory_tier_lock
+eadce52a9ef6 khugepaged: fix readahead lock inversion in collapse_file()
+c782fc8ada81 ovl: fail the mount if the casefold flag has changed
+f19f2b308beb net/sched: clamp skb->queue_mapping before indexing the tx queue
+35d2d6e5ac0d net: reject a negative TCP header offset in qdisc_pkt_len_segs_init()
+d5e912448cd9 vhost/vsock: size receive SKBs from declared payload
+6d2cf411aba2 mptcp: do not use Fast Open on MP_JOIN subflows
+63a596375176 drm/amdgpu: parse CS IBs at the BO offset their VA mapping starts at
+7a56d929dc23 drm/amdgpu: keep the CS user fence BO in GTT
+da2897ee8b81 drm/amdkfd: use the queue's process info for the WPTR BO eviction fence
+623507b8f4fe drm/amdgpu/userq: wait for GPU reset before mapping or unmapping queues
+920ca822f527 drm/amdgpu: check amdgpu_vm_ready() in dma-buf move notify
+ce5f2a25bdf6 drm/amdgpu/userq: validate the moved individual BOs on restore
+f3afbf7d832a drm/amd/display: Reset DET of HUBPs without a plane before outstanding updates
+7fac15d009cf drm/amd/display: Fix NULL deref in dcn401_update_clocks_update_dtb_dto
+ea47f8419924 drm/amdgpu: Fix duplicate dependency fence releases
+7ba7655701c5 drm/amdgpu: Clamp the ATIF backlight curve to its 99 points
+fb900f8bfd8a drm/amdgpu: drop the dma-buf reference when a KFD import fails
+e0a1404b34e0 drm/amdgpu: unlock the VM and BO when attaching a KFD BO fails
+6d1f901a8360 drm/amdgpu: don't drop the gang dependency fence twice
+29b8758b4700 nvmet: don't return memory contents beyond valid data when reading ANA log page
+beeec0404622 arm64: suspend: Save and restore TPIDR2_EL0 across CPU suspend
+520ef67f47f6 ovl: look up the index by the decoded origin
+a1f7f37417ba drm/nouveau/nvkm: clear use.enabled when subdev init fails
+f6c7bb1f0799 ALSA: bcd2000: Fix use-after-free of MIDI URBs on file close
+1f8101b6adc8 ALSA: usx2y: Refuse a retried DSP load after a failure
+a3cf5ebab5f1 ALSA: usb-audio: qcom: Check the return value of qmi_handle_init()
+8dbab764f1e0 ALSA: hda/tas2781: Only accept CRC-less V1 data if all entries are valid
+db51425c9eb0 ALSA: line6: Reject capture buffers smaller than two packets
+4cbb826b3b36 ALSA: usx2y: Require a buffer of two URBs
+e2c6de52ffac ALSA: usx2y: Guard the playback copy
+8288ba942cfd net/smc: don't spin in smc_rx_recvmsg() while a pipe holds spliced data
+c1a757f8df13 drm/etnaviv: Flush the tile status cache through both the PE and BLT
+49b09ae0bf57 mptcp: pm: kernel: use RCU to free endpoint listeners
+da582d84fcf5 udf: don't let the extent type hide an exhausted free-space table extent
+e614c3e35a66 udf: check the unallocated space table when it is loaded
+0c52750caaac udf: fix preallocation discarding before an empty allocation extent
+8a0449832b50 nvme: wait for SRCU readers before splicing the namespace list
+c282051fc2ca sched/fair: Clear throttle state when leaving the fair class
+9bf6ee7952c7 arm64: sdei: Run the event handler on the kernel vectors
+58c1eb84e977 arm64: sdei: Preserve the interrupted context's exception registers
+5cdc3746fa16 x86/mm: Fix global ASID handed out to two processes
+6e2213dae78b iommu/amd: Force device table to maximum size
+9c1d14d3b66b ceph: clamp the inline data length in ceph_fill_inline_data()
+a4845f077415 ata: libata-scsi: reject data-in commands with a data-out buffer
+84c6089a365f iommu/arm-smmu-v3: Handle ARM erratum for CONT under invalidation with SVA
+b5a71253c5c7 f2fs: fix to avoid folio->mapping dereference in is_{meta, node}_folio()
+ad1320865b18 sctp: hold shkey across socket migration
+52ffeaa358d1 sctp: re-point retained control chunks on association migration
+351817226fbf fs/ntfs3: validate the EA value length in ntfs_read_ea()
+ca75b38b1a3c platform/chrome: cros_usbpd_notify: Only use drvdata when parent is GOOG0004
+514c9247db30 mm/userfaultfd: only allocate anon_vma in CoW mappings
+0237c47ca170 mm/shmem: honour F_SEAL_EXEC when an ACL is set
+04cc8c59a3d7 wifi: rtw88: usb: bound what the driver feeds the after-DTIM queue
+b9b036bd1e2c f2fs: zone: fix to avoid bio split on sequential zone
+080833a32fd5 f2fs: bound the SIT/NAT bitmaps by the checkpoint pack
+a1b4bd2c2c26 KVM: arm64: vgic: Stop the target vcpu when disabling LPIs
+894ca8b85666 f2fs: fix to avoid potential reference count leak in do_garbage_collect()
+2eeeaa9c1ff0 nvme-tcp: Validate the queue state under the queue lock in the address attribute
+cfe96ce583c5 PCI: cadence: Store the core controller in platform drvdata
+e74476ad8162 f2fs: fix to invalidate curseg if change_curseg() fails
+e21952d72b47 iommufd/iova_bitmap: Ensure that iova_bitmap_set() handles the full IOVA
+48691075b0ad assoc_array: don't chain a new shortcut onto an existing one
+8afff2e4b909 assoc_array: keep gc's cleanup out of the live tree on allocation failure
