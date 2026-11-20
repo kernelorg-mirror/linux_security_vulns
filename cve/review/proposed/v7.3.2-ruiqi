@@ -14,7 +14,6 @@ c254eec4364b io_uring/waitid: own the request before clearing ->head
 68a95c396889 io_uring/mpscq: disable preemption while pushing
 fe6ca13c98b1 io_uring/cancel: let CANCEL_ALL find parked requests
 89f193dc3ef4 io_uring/timeout: don't lose a cancel as io-wq arms a timeout
-b42c85c20d84 exec: cancel io_uring requests before de_thread()
 1f978881ce6c fork: don't create io threads once PF_POSTCOREDUMP is set
 aa118c8f61d5 ALSA: line6: Clear prev_fbuf on capture buffer release
 c182bfe944eb wifi: mt76: mt7925: fix reset panic caused by the WM2 rx irq mask

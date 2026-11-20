@@ -6,7 +6,6 @@ a518b9a9ef6e ("Bluetooth: L2CAP: Only accept connection responses to outstanding
 bf0f3a37e6cc ("NFSD: stop registering with rpcbind after a failure in listener_set")
 cb0306c52ffa ("io_uring/cancel: drop sqd->lock while SQPOLL waits")
 9eff9c07e927 ("io_uring/poll: cancel all matching requests in one pass")
-f013b6955064 ("io_uring/sqpoll: do the return-to-userspace work in the SQPOLL thread")
 40d070cbb190 ("block: restore the iterator when rejecting a misaligned bio")
 6b016c5c9644 ("ACPI: CPPC: Validate FFH register fields before hardware access")
 21e018235d99 ("cpufreq: CPPC: Select the frequency-invariance callback per CPU")
